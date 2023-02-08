@@ -1,6 +1,10 @@
 export function decode(buffer: ArrayBuffer) {
   let position = 0
   const data = new Uint8Array(buffer)
+  const gif: Record<string, any> = {
+    data,
+    blocks: [],
+  }
 
   // utils
   const readByte = () => data[position++]
@@ -8,10 +12,6 @@ export function decode(buffer: ArrayBuffer) {
   const readString = (bytesLength: number) => Array.from(readBytes(bytesLength)).map(val => String.fromCharCode(val)).join('')
   const readUint16 = () => new Uint16Array(new Uint8Array(Array.from(readBytes(2))).buffer)[0]
   const byteToBits = (value: number) => value.toString(2).padStart(8, '0').split('').map(v => Number(v))
-
-  const gif: Record<string, any> = {
-    frames: [],
-  }
 
   // 1. Header
   gif.signature = readString(3)
@@ -103,41 +103,41 @@ export function decode(buffer: ArrayBuffer) {
 
     // 7. Image Descriptor
     if (flag === 0x2C) {
-      const frame: Record<string, any> = {}
-      frame.x = readUint16()
-      frame.y = readUint16()
-      frame.width = readUint16()
-      frame.height = readUint16()
+      const block: Record<string, any> = {}
+      block.x = readUint16()
+      block.y = readUint16()
+      block.width = readUint16()
+      block.height = readUint16()
       const packedFields = readByte()
 
       // <Packed Fields>
       const bits = packedFields.toString(2).padStart(8, '0').split('').map(v => Number(v))
-      frame.localColorTableFlag = Boolean(bits[0])
-      frame.interlaceFlag = Boolean(bits[1])
-      frame.sortFlag = Boolean(bits[2])
-      frame.reserved = new Uint16Array(new Uint8Array([bits[3], bits[4]]).buffer)[0]
-      frame.sizeOfLocalColorTable = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
+      block.localColorTableFlag = Boolean(bits[0])
+      block.interlaceFlag = Boolean(bits[1])
+      block.sortFlag = Boolean(bits[2])
+      block.reserved = new Uint16Array(new Uint8Array([bits[3], bits[4]]).buffer)[0]
+      block.sizeOfLocalColorTable = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
 
       // 8. Local Color Table
-      frame.localColorTable = frame.localColorTableFlag
-        ? Array.from({ length: frame.sizeOfLocalColorTable }, () => Array.from(readBytes(3)))
+      block.localColorTable = block.localColorTableFlag
+        ? Array.from({ length: block.sizeOfLocalColorTable }, () => Array.from(readBytes(3)))
         : []
 
       // 9. Image Data
-      frame.lzwMinimumCodeSize = readByte()
-      frame.chunks = []
+      block.lzwMinimumCodeSize = readByte()
+      block.subBlocks = []
       while (true) {
         const byteLength = readByte()
         if (!byteLength) {
           break
         }
-        const chunk: Record<string, any> = { begin: position, length: byteLength }
+        const subBlock: Record<string, any> = { begin: position, length: byteLength }
         position += byteLength
-        chunk.end = position
-        frame.chunks.push(chunk)
+        subBlock.end = position
+        block.subBlocks.push(subBlock)
       }
 
-      gif.frames.push(frame)
+      gif.blocks.push(block)
       continue
     }
 
