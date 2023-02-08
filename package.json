@@ -1,0 +1,57 @@
+{
+  "name": "pkg-name",
+  "type": "module",
+  "version": "0.0.0",
+  "packageManager": "pnpm@7.9.0",
+  "description": "",
+  "author": "wxm",
+  "license": "MIT",
+  "homepage": "https://github.com/qq15725/pkg-name",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qq15725/pkg-name.git"
+  },
+  "bugs": {
+    "url": "https://github.com/qq15725/pkg-name/issues"
+  },
+  "keywords": [],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "types/index.d.ts",
+  "browser": "dist/index.js",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./types/*",
+        "./types/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "types"
+  ],
+  "scripts": {
+    "build": "vite build && tsc --project tsconfig.build.json",
+    "dev": "vite",
+    "lint": "eslint .",
+    "release": "bumpp package.json --commit \"chore(release): publish v%s\" --push --tag && pnpm publish"
+  },
+  "devDependencies": {
+    "@qq15725/eslint-config": "^1.1.0",
+    "@types/node": "^18.11.18",
+    "bumpp": "^8.2.1",
+    "eslint": "^8.31.0",
+    "typescript": "^4.9.4",
+    "vite": "^4.0.4",
+    "vitest": "^0.26.3"
+  }
+}
