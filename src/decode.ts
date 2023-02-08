@@ -42,7 +42,7 @@ export function decode(buffer: ArrayBuffer) {
     if (flag === 0x21) {
       const label = readByte()
 
-      // 4. Application Extension Label
+      // 4. Application Extension
       if (label === 0xFF) {
         // Length of Application Block
         // (eleven bytes of data to follow)
@@ -101,7 +101,7 @@ export function decode(buffer: ArrayBuffer) {
       continue
     }
 
-    // 7. Image Descriptor.
+    // 7. Image Descriptor
     if (flag === 0x2C) {
       const frame: Record<string, any> = {}
       frame.x = readUint16()
@@ -125,20 +125,23 @@ export function decode(buffer: ArrayBuffer) {
 
       // 9. Image Data
       frame.lzwMinimumCodeSize = readByte()
-
+      frame.chunks = []
       while (true) {
-        const val = readByte()
-        if (!val) {
+        const byteLength = readByte()
+        if (!byteLength) {
           break
         }
-        readBytes(val)
+        const chunk: Record<string, any> = { begin: position, length: byteLength }
+        position += byteLength
+        chunk.end = position
+        frame.chunks.push(chunk)
       }
 
       gif.frames.push(frame)
       continue
     }
 
-    // 10. Trailer Marker (end of file).
+    // 10. Trailer Marker (end of file)
     if (flag === 0x3B) {
       break
     }
