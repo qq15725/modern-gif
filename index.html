@@ -7,10 +7,15 @@
 <body>
   <div>Playground</div>
 
-  <script type="module">
-    import { one } from './src'
+  <script type="module" async>
+    import { decode } from './src'
 
-    console.log(one)
+    console.log(
+      decode(
+        await fetch('https://image-static.segmentfault.com/111/706/1117069530-2a5d7a8a40f66b6c')
+          .then(res => res.arrayBuffer()),
+      ),
+    )
   </script>
 </body>
 </html>

@@ -1,18 +1,18 @@
 {
-  "name": "pkg-name",
+  "name": "modern-gif",
   "type": "module",
   "version": "0.0.0",
   "packageManager": "pnpm@7.9.0",
   "description": "",
   "author": "wxm",
   "license": "MIT",
-  "homepage": "https://github.com/qq15725/pkg-name",
+  "homepage": "https://github.com/qq15725/modern-gif",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/qq15725/pkg-name.git"
+    "url": "git+https://github.com/qq15725/modern-gif.git"
   },
   "bugs": {
-    "url": "https://github.com/qq15725/pkg-name/issues"
+    "url": "https://github.com/qq15725/modern-gif/issues"
   },
   "keywords": [],
   "sideEffects": false,
@@ -47,11 +47,11 @@
   },
   "devDependencies": {
     "@qq15725/eslint-config": "^1.1.0",
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.13.0",
     "bumpp": "^8.2.1",
-    "eslint": "^8.31.0",
-    "typescript": "^4.9.4",
-    "vite": "^4.0.4",
-    "vitest": "^0.26.3"
+    "eslint": "^8.33.0",
+    "typescript": "^4.9.5",
+    "vite": "^4.1.1",
+    "vitest": "^0.28.4"
   }
 }
