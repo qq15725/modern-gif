@@ -1,21 +1,20 @@
-export function decode(buffer: ArrayBuffer) {
-  let position = 0
-  const data = new Uint8Array(buffer)
-  const gif: Record<string, any> = {
-    data,
-    blocks: [],
-  }
+import type { GIF, GIFSpecBlock } from './types'
+
+export function decode(data: ArrayBuffer, offset = 0): GIF {
+  const view = new Uint8Array(data)
+  const gif = {} as GIF
+  gif.blocks = [] as any
 
   // utils
-  const readByte = () => data[position++]
-  const readBytes = (length: number) => data.subarray(position, (position += length))
+  const readByte = () => view[offset++]
+  const readBytes = (length: number) => view.subarray(offset, offset += length)
   const readString = (bytesLength: number) => Array.from(readBytes(bytesLength)).map(val => String.fromCharCode(val)).join('')
-  const readUint16 = () => new Uint16Array(new Uint8Array(Array.from(readBytes(2))).buffer)[0]
+  const readUint16 = () => new Uint16Array(data.slice(offset, offset += 2))[0]
   const byteToBits = (value: number) => value.toString(2).padStart(8, '0').split('').map(v => Number(v))
 
   // 1. Header
-  gif.signature = readString(3)
-  gif.version = readString(3)
+  gif.signature = readString(3) as 'GIF'
+  gif.version = readString(3) as '87a' | '89a'
 
   // 2. Logical Screen Descriptor
   gif.width = readUint16()
@@ -103,11 +102,11 @@ export function decode(buffer: ArrayBuffer) {
 
     // 7. Image Descriptor
     if (flag === 0x2C) {
-      const block: Record<string, any> = {}
-      block.x = readUint16()
-      block.y = readUint16()
-      block.width = readUint16()
-      block.height = readUint16()
+      const block = {} as GIFSpecBlock
+      block.imageLeftPosition = readUint16()
+      block.imageRightPosition = readUint16()
+      block.imageWidth = readUint16()
+      block.imageHeight = readUint16()
       const packedFields = readByte()
 
       // <Packed Fields>
@@ -125,16 +124,16 @@ export function decode(buffer: ArrayBuffer) {
 
       // 9. Image Data
       block.lzwMinimumCodeSize = readByte()
-      block.subBlocks = []
+      block.imageData = []
       while (true) {
         const byteLength = readByte()
         if (!byteLength) {
           break
         }
-        const subBlock: Record<string, any> = { begin: position, length: byteLength }
-        position += byteLength
-        subBlock.end = position
-        block.subBlocks.push(subBlock)
+        block.imageData.push({
+          begin: offset,
+          end: offset += byteLength,
+        })
       }
 
       gif.blocks.push(block)
@@ -147,6 +146,22 @@ export function decode(buffer: ArrayBuffer) {
     }
 
     console.warn(`Unknown gif block: 0x${ flag.toString(16) }`)
+  }
+
+  gif.read = () => {
+    return gif.blocks.map(block => {
+      const { imageData } = block
+      const imageDataView = new Uint8Array(
+        imageData.reduce((total, { begin, end }) => total + (end - begin), 0),
+      )
+      let offset = 0
+      imageData.forEach(({ begin, end }) => {
+        const subBlockView = view.subarray(begin, end)
+        imageDataView.set(subBlockView, offset)
+        offset += subBlockView.byteLength
+      })
+      return imageDataView
+    })
   }
 
   return gif
