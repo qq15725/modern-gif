@@ -1,32 +1,67 @@
+// Application Extension
+export interface Application {
+  identifier: string
+  authenticationCode: string
+  data: string
+}
+
+// Graphic Control Extension
+export interface GraphicControl {
+  delayTime: number
+  transparentColorIndex: number
+  data: string
+  // <Packed Fields>
+  reserved: number
+  disposalMethod: number
+  userInputFlag: boolean
+  transparentColorFlag: boolean
+}
+
+// Comment Extension
+export type Comment = string
+
+// Plain Text Extension
+export interface PlainText {
+  left: number
+  top: number
+  width: number
+  height: number
+  cellWidth: number
+  cellHeight: number
+  colorIndex: number
+  backgroundColorIndex: number
+  data: string
+}
+
 export interface GIFSpecBlock {
   // Image Descriptor
-  imageLeftPosition: number
-  imageRightPosition: number
-  imageWidth: number
-  imageHeight: number
+  left: number
+  top: number
+  width: number
+  height: number
   // <Packed Fields>
-  localColorTableFlag: boolean
   interlaceFlag: boolean
   sortFlag: boolean
   reserved: number
-  sizeOfLocalColorTable: number
 
   // Local Color Table
-  localColorTable: number[][]
+  colors?: number[][]
 
   // LZW Minimum Code Size
   lzwMinimumCodeSize: number
 
   // Image Data
-  imageData: {
-    begin: number
-    end: number
-  }[]
+  imageData: { begin: number; end: number }[]
+
+  // Extensions
+  application?: Application
+  graphicControl?: GraphicControl
+  comment?: Comment
+  plainText?: PlainText
 }
 
 export interface GIFSpec {
   // Header
-  signature: 'GIF'
   version: '87a' | '89a'
 
   // Logical Screen Descriptor
@@ -35,26 +70,11 @@ export interface GIFSpec {
   backgroundColorIndex: number
   pixelAspectRatio: number
   // <Packed Fields>
-  globalColorTableFlag: boolean
   colorResoluTion: number
   sortFlag: boolean
-  sizeOfGlobalColorTable: number
 
   // Global Color Table
-  globalColorTable: number[][]
-
-  // Graphic Control Extension
-  blockSize: number
-  delayTime: number
-  transparentColorIndex: number
-  // <Packed Fields>
-  reserved: number
-  disposalMethod: number
-  userInputFlag: boolean
-  transparentColorFlag: boolean
-
-  // Comment Extension
-  commentData: string
+  colors?: number[][]
 
   // Image Descriptor
   blocks: GIFSpecBlock[]
