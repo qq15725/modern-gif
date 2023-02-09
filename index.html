@@ -3,19 +3,53 @@
 <head>
   <meta charset="utf-8">
   <title>Playground</title>
-</head>
-<body>
-  <div>Playground</div>
+  <style>
+    canvas {
+      margin: 8px;
+      width: 100px;
+    }
 
+    img {
+      display: block;
+      margin: 8px;
+      width: 100px;
+    }
+  </style>
+</head>
+
+<img src="/test/assets/test.gif" />
+
+<body>
   <script type="module" async>
     import { decode } from './src'
 
-    const gif = decode(
-      await fetch('https://image-static.segmentfault.com/111/706/1117069530-2a5d7a8a40f66b6c')
-        .then(res => res.arrayBuffer()),
-    )
+    const dataView = await fetch(document.querySelector('img').src)
+      .then(res => res.arrayBuffer())
+      .then(buffer => new Uint8Array(buffer))
 
-    console.log(gif, gif.read())
+    // eslint-disable-next-line no-console
+    console.time('decode')
+    const gif = decode(dataView)
+    // eslint-disable-next-line no-console
+    console.timeEnd('decode')
+
+    Array.from({ length: gif.frames.length }, (_, index) => {
+      // eslint-disable-next-line no-console
+      console.time(`read frame${ index }`)
+      const frame = gif.readFrame(index)
+      // eslint-disable-next-line no-console
+      console.timeEnd(`read frame${ index }`)
+      const canvas = document.createElement('canvas')
+      const context2d = canvas.getContext('2d')
+      canvas.width = frame.width
+      canvas.height = frame.height
+      context2d.putImageData(frame, 0, 0)
+      document.body.append(canvas)
+      return index
+    })
+
+    // eslint-disable-next-line no-console
+    console.log(gif)
   </script>
 </body>
 </html>

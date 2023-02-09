@@ -18,6 +18,40 @@
   </a>
 </p>
 
+## 📦 Install
+
+```sh
+npm i modern-gif
+```
+
+## 🦄 Usage
+
+### Decode
+
+```ts
+import GIF from 'modern-gif'
+
+window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/assets/test.gif')
+  .then(res => res.arrayBuffer())
+  .then(buffer => new Uint8Array(buffer))
+  .then(dataView => {
+    const gif = GIF.decode(dataView)
+    const frame = gif.readFrame(0)
+    console.log(gif)
+
+    const canvas = document.createElement('canvas')
+    const context2d = canvas.getContext('2d')
+    canvas.width = frame.width
+    canvas.height = frame.height
+    context2d.putImageData(frame, 0, 0)
+    document.body.append(canvas)
+  })
+```
+
+## Types
+
+See the [types.ts](src/types.ts)
+
 ## Specifications
 
-[GIF 89a](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)
+[GIF89a Spec](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)

@@ -12,23 +12,27 @@ import {
   TRAILER,
   VERSIONS,
 } from './utils'
-import type { Application, GIF, GIFSpecBlock, GraphicControl, PlainText } from './types'
+import { lzwDecode } from './lzw'
+import { deinterlace } from './deinterlace'
+import type { Application, Frame, GIF, GraphicControl, PlainText } from './types'
 
-export function decode(data: ArrayBuffer, offset = 0): GIF {
-  const view = new Uint8Array(data)
-  const gif = {} as GIF
-  gif.blocks = [] as any
+export function decode(dataView: Uint8Array): GIF {
+  const gif = {
+    frames: [] as Frame[],
+  } as GIF
+
+  let offset = 0
 
   // utils
-  const readByte = () => view[offset++]
-  const readBytes = (length: number) => view.subarray(offset, offset += length)
+  const readByte = () => dataView[offset++]
+  const readBytes = (length: number) => dataView.subarray(offset, offset += length)
   const readString = (bytesLength: number) => Array.from(readBytes(bytesLength)).map(val => String.fromCharCode(val)).join('')
-  const readUnsigned = () => new Uint16Array(data.slice(offset, offset += 2))[0]
+  const readUnsigned = () => new Uint16Array(dataView.buffer.slice(offset, offset += 2))[0]
   const readData = () => {
     let str = ''
     while (true) {
       const val = readByte()
-      if (val === 0 && view[offset] !== 0) break
+      if (val === 0 && dataView[offset] !== 0) break
       str += String.fromCharCode(val)
     }
     return str
@@ -47,61 +51,63 @@ export function decode(data: ArrayBuffer, offset = 0): GIF {
   gif.width = readUnsigned()
   gif.height = readUnsigned()
   const packedFields = readByte()
-  gif.backgroundColorIndex = readByte()
+  const backgroundColorIndex = readByte()
   gif.pixelAspectRatio = readByte()
 
   // <Packed Fields>
   const bits = byteToBits(packedFields)
-  const hasColors = Boolean(bits[0])
+  const hasPalette = Boolean(bits[0])
   gif.colorResoluTion = parseInt(`${ bits[1] }${ bits[2] }${ bits[3] }`, 2) + 1
-  gif.sortFlag = Boolean(bits[4])
 
   // Global Color Table
-  if (hasColors) {
-    gif.colors = Array.from({
-      length: Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1),
-    }, () => Array.from(readBytes(3)))
+  if (hasPalette) {
+    const length = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
+    gif.palette = Array.from({ length }, () => Array.from(readBytes(3)))
+    gif.paletteIsSorted = Boolean(bits[4])
+    gif.backgroundColor = gif.palette[backgroundColorIndex]
   }
 
-  let block = {} as GIFSpecBlock
+  let frame = {
+    delay: 100,
+  } as Frame
+
   while (true) {
     const flag = readByte()
 
     if (flag === IMAGE_DESCRIPTOR) {
-      block.left = readUnsigned()
-      block.top = readUnsigned()
-      block.width = readUnsigned()
-      block.height = readUnsigned()
+      frame.left = readUnsigned()
+      frame.top = readUnsigned()
+      frame.width = readUnsigned()
+      frame.height = readUnsigned()
       const packedFields = readByte()
 
       // <Packed Fields>
       const bits = packedFields.toString(2).padStart(8, '0').split('').map(v => Number(v))
-      const hasColors = Boolean(bits[0])
-      block.interlaceFlag = Boolean(bits[1])
-      block.sortFlag = Boolean(bits[2])
-      block.reserved = new Uint16Array(new Uint8Array([bits[3], bits[4]]).buffer)[0]
+      const hasPalette = Boolean(bits[0])
+      frame.interlaced = Boolean(bits[1])
+      frame.reserved = new Uint16Array(new Uint8Array([bits[3], bits[4]]).buffer)[0]
 
       // Local Color Table
-      if (hasColors) {
-        block.colors = Array.from({
-          length: Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1),
-        }, () => Array.from(readBytes(3)))
+      if (hasPalette) {
+        const length = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
+        frame.palette = Array.from({ length }, () => Array.from(readBytes(3)))
+        frame.paletteIsSorted = Boolean(bits[2])
       }
 
       // Image Data
-      block.lzwMinimumCodeSize = readByte()
-      block.imageData = []
+      frame.minCodeSize = readByte()
+      frame.image = []
       while (true) {
         const byteLength = readByte()
         if (byteLength === 0) break
-        block.imageData.push({
+        frame.image.push({
           begin: offset,
           end: offset += byteLength,
         })
       }
 
-      gif.blocks.push(block)
-      block = {} as GIFSpecBlock
+      gif.frames.push(frame)
+      frame = {} as Frame
       continue
     }
 
@@ -114,12 +120,12 @@ export function decode(data: ArrayBuffer, offset = 0): GIF {
         application.identifier = readString(8)
         application.authenticationCode = readString(3)
         application.data = readData()
-        block.application = application
+        frame.application = application
         continue
       }
 
       if (extensionFlag === EXTENSION_COMMENT) {
-        block.comment = readData()
+        frame.comment = readData()
         continue
       }
 
@@ -127,17 +133,23 @@ export function decode(data: ArrayBuffer, offset = 0): GIF {
         if (readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
         const graphicControl = {} as GraphicControl
         const packedFields = readByte()
-        graphicControl.delayTime = readUnsigned()
-        graphicControl.transparentColorIndex = readByte()
-        graphicControl.data = readData()
+        graphicControl.delay = readUnsigned()
+        const transparentIndex = readByte()
+        readData()
 
         // <Packed Fields>
         const bits = byteToBits(packedFields)
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2)
         graphicControl.disposalMethod = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2)
-        graphicControl.userInputFlag = Boolean(bits[6])
-        graphicControl.transparentColorFlag = Boolean(bits[7])
-        block.graphicControl = graphicControl
+        graphicControl.userInput = Boolean(bits[6])
+        const hasTransparentIndex = Boolean(bits[7])
+
+        if (hasTransparentIndex) {
+          graphicControl.transparentIndex = transparentIndex
+        }
+
+        frame.graphicControl = graphicControl
+        frame.delay = (graphicControl.delay || 10) * 10
         continue
       }
 
@@ -153,7 +165,7 @@ export function decode(data: ArrayBuffer, offset = 0): GIF {
         plainText.colorIndex = readByte()
         plainText.backgroundColorIndex = readByte()
         plainText.data = readData()
-        block.plainText = plainText
+        frame.plainText = plainText
         continue
       }
 
@@ -166,21 +178,45 @@ export function decode(data: ArrayBuffer, offset = 0): GIF {
     console.warn(`Unknown gif block: 0x${ flag.toString(16) }`)
   }
 
-  gif.read = () => {
-    return gif.blocks.map(block => {
-      const { imageData } = block
-      const imageDataView = new Uint8Array(
-        imageData.reduce((total, { begin, end }) => total + (end - begin), 0),
-      )
-      let offset = 0
-      imageData.forEach(({ begin, end }) => {
-        const subBlockView = view.subarray(begin, end)
-        imageDataView.set(subBlockView, offset)
-        offset += subBlockView.byteLength
-      })
-      return imageDataView
-    })
-  }
+  gif.readFrame = (index: number) => readFrame(dataView, gif, index)
 
   return gif
+}
+
+export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
+  const frame = gif.frames[index]
+  if (!frame) {
+    throw new Error(`This index is abnormal. index: ${ index }`)
+  }
+  const {
+    image,
+    width,
+    height,
+    palette = gif.palette,
+    minCodeSize,
+    interlaced,
+  } = frame
+  const imageDataView = new Uint8Array(
+    image.reduce((total, { begin, end }) => total + (end - begin), 0),
+  )
+  let offset = 0
+  image.forEach(({ begin, end }) => {
+    const subBlockView = dataView.subarray(begin, end)
+    imageDataView.set(subBlockView, offset)
+    offset += subBlockView.byteLength
+  })
+  let indexes = lzwDecode(minCodeSize, imageDataView, width * height)
+  if (interlaced) {
+    indexes = deinterlace(indexes, width)
+  }
+  const pixels = new Uint8ClampedArray(width * height * 4)
+  indexes.forEach((colorIndex, index) => {
+    const color = palette?.[colorIndex] ?? [0, 0, 0]
+    index *= 4
+    pixels[index] = color[0]
+    pixels[index + 1] = color[1]
+    pixels[index + 2] = color[2]
+    pixels[index + 3] = colorIndex === frame.graphicControl?.transparentIndex ? 0 : 255
+  })
+  return new ImageData(pixels, width, height)
 }

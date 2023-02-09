@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "packageManager": "pnpm@7.9.0",
-  "description": "",
+  "description": "Fastest GIF decoder / encoder. using TypeScript.",
   "author": "wxm",
   "license": "MIT",
   "homepage": "https://github.com/qq15725/modern-gif",
@@ -14,7 +14,11 @@
   "bugs": {
     "url": "https://github.com/qq15725/modern-gif/issues"
   },
-  "keywords": [],
+  "keywords": [
+    "gif",
+    "encoder",
+    "decoder"
+  ],
   "sideEffects": false,
   "exports": {
     ".": {

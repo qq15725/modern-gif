@@ -7,14 +7,13 @@ export interface Application {
 
 // Graphic Control Extension
 export interface GraphicControl {
-  delayTime: number
-  transparentColorIndex: number
-  data: string
+  // Unit: 1/100
+  delay: number
+  transparentIndex?: number
   // <Packed Fields>
   reserved: number
   disposalMethod: number
-  userInputFlag: boolean
-  transparentColorFlag: boolean
+  userInput: boolean
 }
 
 // Comment Extension
@@ -33,25 +32,30 @@ export interface PlainText {
   data: string
 }
 
-export interface GIFSpecBlock {
-  // Image Descriptor
+export type RGB = number[]
+
+// Image Descriptor
+export interface Frame {
   left: number
   top: number
   width: number
   height: number
   // <Packed Fields>
-  interlaceFlag: boolean
-  sortFlag: boolean
+  interlaced: boolean
   reserved: number
+  paletteIsSorted?: boolean
 
   // Local Color Table
-  colors?: number[][]
+  palette?: RGB[]
 
   // LZW Minimum Code Size
-  lzwMinimumCodeSize: number
+  minCodeSize: number
 
   // Image Data
-  imageData: { begin: number; end: number }[]
+  image: { begin: number; end: number }[]
+
+  // Unit: ms
+  delay: number
 
   // Extensions
   application?: Application
@@ -60,26 +64,24 @@ export interface GIFSpecBlock {
   plainText?: PlainText
 }
 
-export interface GIFSpec {
+export interface GIF {
   // Header
   version: '87a' | '89a'
 
   // Logical Screen Descriptor
   width: number
   height: number
-  backgroundColorIndex: number
+  backgroundColor?: RGB
   pixelAspectRatio: number
   // <Packed Fields>
   colorResoluTion: number
-  sortFlag: boolean
+  paletteIsSorted?: boolean
 
   // Global Color Table
-  colors?: number[][]
+  palette?: RGB[]
 
   // Image Descriptor
-  blocks: GIFSpecBlock[]
-}
+  frames: Frame[]
 
-export interface GIF extends GIFSpec {
-  read(): Uint8Array[]
+  readFrame(index: number): ImageData
 }
