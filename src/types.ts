@@ -12,7 +12,7 @@ export interface GraphicControl {
   transparentIndex?: number
   // <Packed Fields>
   reserved: number
-  disposalMethod: number
+  disposal: 1 | 2 | 3 | 4 | 5 | 6 | 7
   userInput: boolean
 }
 

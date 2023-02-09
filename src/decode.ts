@@ -21,18 +21,18 @@ export function decode(dataView: Uint8Array): GIF {
     frames: [] as Frame[],
   } as GIF
 
-  let offset = 0
+  let cursor = 0
 
   // utils
-  const readByte = () => dataView[offset++]
-  const readBytes = (length: number) => dataView.subarray(offset, offset += length)
+  const readByte = () => dataView[cursor++]
+  const readBytes = (length: number) => dataView.subarray(cursor, cursor += length)
   const readString = (bytesLength: number) => Array.from(readBytes(bytesLength)).map(val => String.fromCharCode(val)).join('')
-  const readUnsigned = () => new Uint16Array(dataView.buffer.slice(offset, offset += 2))[0]
+  const readUnsigned = () => new Uint16Array(dataView.buffer.slice(cursor, cursor += 2))[0]
   const readData = () => {
     let str = ''
     while (true) {
       const val = readByte()
-      if (val === 0 && dataView[offset] !== 0) break
+      if (val === 0 && dataView[cursor] !== 0) break
       str += String.fromCharCode(val)
     }
     return str
@@ -101,8 +101,8 @@ export function decode(dataView: Uint8Array): GIF {
         const byteLength = readByte()
         if (byteLength === 0) break
         frame.image.push({
-          begin: offset,
-          end: offset += byteLength,
+          begin: cursor,
+          end: cursor += byteLength,
         })
       }
 
@@ -140,7 +140,7 @@ export function decode(dataView: Uint8Array): GIF {
         // <Packed Fields>
         const bits = byteToBits(packedFields)
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2)
-        graphicControl.disposalMethod = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2)
+        graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
         graphicControl.userInput = Boolean(bits[6])
         const hasTransparentIndex = Boolean(bits[7])
 
