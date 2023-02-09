@@ -17,9 +17,7 @@ import { deinterlace } from './deinterlace'
 import type { Application, Frame, GIF, GraphicControl, PlainText } from './types'
 
 export function decode(dataView: Uint8Array): GIF {
-  const gif = {
-    frames: [] as Frame[],
-  } as GIF
+  const gif = {} as GIF
 
   let cursor = 0
 
@@ -51,21 +49,23 @@ export function decode(dataView: Uint8Array): GIF {
   gif.width = readUnsigned()
   gif.height = readUnsigned()
   const packedFields = readByte()
-  const backgroundColorIndex = readByte()
+  gif.backgroundColorIndex = readByte()
   gif.pixelAspectRatio = readByte()
 
   // <Packed Fields>
   const bits = byteToBits(packedFields)
-  const hasPalette = Boolean(bits[0])
+  gif.globalColorTable = Boolean(bits[0])
   gif.colorResoluTion = parseInt(`${ bits[1] }${ bits[2] }${ bits[3] }`, 2) + 1
+  gif.colorSorted = Boolean(bits[4])
+  gif.colorTableSize = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
 
   // Global Color Table
-  if (hasPalette) {
-    const length = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
-    gif.palette = Array.from({ length }, () => Array.from(readBytes(3)))
-    gif.paletteIsSorted = Boolean(bits[4])
-    gif.backgroundColor = gif.palette[backgroundColorIndex]
+  if (gif.globalColorTable) {
+    gif.colors = Array.from({ length: gif.colorTableSize }, () => Array.from(readBytes(3)))
   }
+
+  gif.loop = 0
+  gif.frames = [] as Frame[]
 
   let frame = {
     delay: 100,
@@ -83,15 +83,15 @@ export function decode(dataView: Uint8Array): GIF {
 
       // <Packed Fields>
       const bits = packedFields.toString(2).padStart(8, '0').split('').map(v => Number(v))
-      const hasPalette = Boolean(bits[0])
+      frame.localColorTable = Boolean(bits[0])
       frame.interlaced = Boolean(bits[1])
+      frame.colorSorted = Boolean(bits[2])
       frame.reserved = new Uint16Array(new Uint8Array([bits[3], bits[4]]).buffer)[0]
+      frame.colorTableSize = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
 
       // Local Color Table
-      if (hasPalette) {
-        const length = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
-        frame.palette = Array.from({ length }, () => Array.from(readBytes(3)))
-        frame.paletteIsSorted = Boolean(bits[2])
+      if (frame.localColorTable) {
+        frame.colors = Array.from({ length: frame.colorTableSize }, () => Array.from(readBytes(3)))
       }
 
       // Image Data
@@ -117,9 +117,18 @@ export function decode(dataView: Uint8Array): GIF {
       if (extensionFlag === EXTENSION_APPLICATION) {
         if (readByte() !== EXTENSION_APPLICATION_BLOCK_SIZE) continue
         const application = {} as Application
-        application.identifier = readString(8)
-        application.authenticationCode = readString(3)
-        application.data = readData()
+        const identifier = readString(8)
+        const code = readString(3)
+        if (`${ identifier }${ code }` === 'NETSCAPE2.0') {
+          if (readByte() === 3 && readByte() === 1) {
+            gif.loop = readUnsigned()
+            readByte()
+          }
+        } else {
+          application.data = readData()
+        }
+        application.identifier = identifier
+        application.code = code
         frame.application = application
         continue
       }
@@ -133,8 +142,8 @@ export function decode(dataView: Uint8Array): GIF {
         if (readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
         const graphicControl = {} as GraphicControl
         const packedFields = readByte()
-        graphicControl.delay = readUnsigned()
-        const transparentIndex = readByte()
+        graphicControl.delayTime = readUnsigned()
+        graphicControl.transparentIndex = readByte()
         readData()
 
         // <Packed Fields>
@@ -142,14 +151,10 @@ export function decode(dataView: Uint8Array): GIF {
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2)
         graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
         graphicControl.userInput = Boolean(bits[6])
-        const hasTransparentIndex = Boolean(bits[7])
-
-        if (hasTransparentIndex) {
-          graphicControl.transparentIndex = transparentIndex
-        }
+        graphicControl.transparent = Boolean(bits[7])
 
         frame.graphicControl = graphicControl
-        frame.delay = (graphicControl.delay || 10) * 10
+        frame.delay = (graphicControl.delayTime || 10) * 10
         continue
       }
 
@@ -192,7 +197,7 @@ export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
     image,
     width,
     height,
-    palette = gif.palette,
+    colors = gif.colors,
     minCodeSize,
     interlaced,
   } = frame
@@ -211,7 +216,7 @@ export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
   }
   const pixels = new Uint8ClampedArray(width * height * 4)
   indexes.forEach((colorIndex, index) => {
-    const color = palette?.[colorIndex] ?? [0, 0, 0]
+    const color = colors?.[colorIndex] ?? [0, 0, 0]
     index *= 4
     pixels[index] = color[0]
     pixels[index + 1] = color[1]

@@ -1,19 +1,20 @@
 // Application Extension
 export interface Application {
   identifier: string
-  authenticationCode: string
+  code: string
   data: string
 }
 
 // Graphic Control Extension
 export interface GraphicControl {
   // Unit: 1/100
-  delay: number
-  transparentIndex?: number
+  delayTime: number
+  transparentIndex: number
   // <Packed Fields>
   reserved: number
   disposal: 1 | 2 | 3 | 4 | 5 | 6 | 7
   userInput: boolean
+  transparent: boolean
 }
 
 // Comment Extension
@@ -41,12 +42,15 @@ export interface Frame {
   width: number
   height: number
   // <Packed Fields>
+  localColorTable: boolean
+  colorTableSize: number
   interlaced: boolean
+  colorSorted: boolean
   reserved: number
   paletteIsSorted?: boolean
 
   // Local Color Table
-  palette?: RGB[]
+  colors?: RGB[]
 
   // LZW Minimum Code Size
   minCodeSize: number
@@ -71,14 +75,20 @@ export interface GIF {
   // Logical Screen Descriptor
   width: number
   height: number
-  backgroundColor?: RGB
+  backgroundColorIndex: number
   pixelAspectRatio: number
   // <Packed Fields>
+  globalColorTable: boolean
   colorResoluTion: number
-  paletteIsSorted?: boolean
+  colorTableSize: number
+  colorSorted?: boolean
 
   // Global Color Table
-  palette?: RGB[]
+  colors?: RGB[]
+
+  // Application Extension
+  // NETSCAPE2.0
+  loop: number
 
   // Image Descriptor
   frames: Frame[]
