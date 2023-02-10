@@ -12,7 +12,7 @@ import {
   TRAILER,
   VERSIONS,
 } from './utils'
-import type { Application, Frame, GIF, GraphicControl, PlainText, RGB } from './types'
+import type { Application, Frame, GIF, GraphicControl, PlainText, RGB } from './gif'
 
 export function decode(data: Uint8Array): GIF {
   const gif = {} as GIF
@@ -35,6 +35,7 @@ export function decode(data: Uint8Array): GIF {
     }
     return block
   }
+  const createFrame = () => ({ index: 0, delay: 100, disposal: 0 }) as Frame
 
   // Header
   const signature = readString(3)
@@ -64,9 +65,7 @@ export function decode(data: Uint8Array): GIF {
 
   gif.frames = [] as Frame[]
 
-  let frame = {
-    delay: 100,
-  } as Frame
+  let frame = createFrame()
 
   while (true) {
     const flag = readByte()
@@ -103,7 +102,8 @@ export function decode(data: Uint8Array): GIF {
       }
 
       gif.frames.push(frame)
-      frame = {} as Frame
+      frame = createFrame()
+      frame.index = gif.frames.length
       continue
     }
 
@@ -137,7 +137,7 @@ export function decode(data: Uint8Array): GIF {
         // <Packed Fields> start
         const bits = read8Bits()
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2) as any
-        graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
+        frame.disposal = graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
         graphicControl.userInput = Boolean(bits[6])
         graphicControl.transparent = Boolean(bits[7])
         // <Packed Fields> end

@@ -7,14 +7,14 @@ export interface Application {
 
 // Graphic Control Extension
 export interface GraphicControl {
-  // Unit: 1/100
-  delayTime: number
+  delayTime: number // unit: 10ms
   transparentIndex: number
-  // <Packed Fields>
-  reserved: 1 | 2 | 3 | 4 | 5 | 6 | 7
-  disposal: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  // ↓ <Packed Fields>
+  reserved: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+  disposal: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
   userInput: boolean
   transparent: boolean
+  // ↑ <Packed Fields>
 }
 
 // Comment Extension
@@ -45,12 +45,13 @@ export interface Frame {
   top: number
   width: number
   height: number
-  // <Packed Fields>
+  // ↓ <Packed Fields>
   localColorTable: boolean
   interlaced: boolean
-  reserved: 1 | 2 | 3
+  reserved: 0 | 1 | 2 | 3
   colorTableSorted: boolean
   colorTableSize: number
+  // ↑ <Packed Fields>
 
   // Local Color Table
   colorTable?: RGB[]
@@ -61,27 +62,28 @@ export interface Frame {
   // Image Data
   imageDataPositions: ImageDataPosition[]
 
-  // Unit: ms
-  delay: number
-
-  // 89a
-  // Extensions
+  // Extensions (89a)
   application?: Application
   graphicControl?: GraphicControl
   comment?: Comment
   plainText?: PlainText
+
+  // Custom fields
+  index: number
+  delay: number // unit: 1ms
+  disposal: GraphicControl['disposal']
 }
 
 export interface GIF87a {
   // Logical Screen Descriptor
   width: number
   height: number
-  // <Packed Fields> start
+  // ↓ <Packed Fields>
   globalColorTable: boolean
   colorResoluTion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   colorTableSorted: boolean
   colorTableSize: number
-  // <Packed Fields> end
+  // ↑ <Packed Fields>
   backgroundColorIndex: number
   pixelAspectRatio: number
 

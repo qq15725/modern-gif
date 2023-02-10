@@ -21,33 +21,37 @@
 
 <body>
   <script type="module" async>
-    import { decode, readFrames } from './src'
+    import { decode, readFrame, readFrames } from './src'
 
-    const dataView = await fetch(document.querySelector('img').src)
+    const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
       .then(buffer => new Uint8Array(buffer))
 
     // eslint-disable-next-line no-console
     console.time('decode')
-    const gif = decode(dataView)
+    const gif = decode(data)
     // eslint-disable-next-line no-console
     console.timeEnd('decode')
 
+    applyFrame(readFrame(data, gif, 1))
+
     // eslint-disable-next-line no-console
     console.time('read frames')
-    readFrames(dataView, gif).forEach(frame => {
+    readFrames(data, gif).forEach(applyFrame)
+    // eslint-disable-next-line no-console
+    console.timeEnd('read frames')
+
+    // eslint-disable-next-line no-console
+    console.log(gif)
+
+    function applyFrame(frame) {
       const canvas = document.createElement('canvas')
       const context2d = canvas.getContext('2d')
       canvas.width = frame.width
       canvas.height = frame.height
       context2d.putImageData(frame, 0, 0)
       document.body.append(canvas)
-    })
-    // eslint-disable-next-line no-console
-    console.timeEnd('read frames')
-
-    // eslint-disable-next-line no-console
-    console.log(gif)
+    }
   </script>
 </body>
 </html>

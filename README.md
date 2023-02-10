@@ -29,28 +29,30 @@ npm i modern-gif
 ### Decode
 
 ```ts
-import GIF from 'modern-gif'
+import { decode, readFrames } from 'modern-gif'
 
 window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/assets/test.gif')
   .then(res => res.arrayBuffer())
   .then(buffer => new Uint8Array(buffer))
-  .then(dataView => {
-    const gif = GIF.decode(dataView)
-    const frame = gif.readFrame(0)
-    console.log(gif)
+  .then(data => {
+    const gif = decode(data)
 
-    const canvas = document.createElement('canvas')
-    const context2d = canvas.getContext('2d')
-    canvas.width = frame.width
-    canvas.height = frame.height
-    context2d.putImageData(frame, 0, 0)
-    document.body.append(canvas)
+    readFrames(data, gif).forEach(frame => {
+      const canvas = document.createElement('canvas')
+      const context2d = canvas.getContext('2d')
+      canvas.width = frame.width
+      canvas.height = frame.height
+      context2d.putImageData(frame, 0, 0)
+      document.body.append(canvas)
+    })
+
+    console.log(gif)
   })
 ```
 
 ## Types
 
-See the [types.ts](src/types.ts)
+See the [gif.ts](src/gif.ts)
 
 ## Specifications
 

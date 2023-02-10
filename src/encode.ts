@@ -8,7 +8,7 @@ import {
   SIGNATURE,
   TRAILER,
 } from './utils'
-import type { GIF } from './types'
+import type { GIF } from './gif'
 
 export function encode(options: Partial<GIF>): Uint8Array {
   const gif = {
@@ -52,8 +52,8 @@ export function encode(options: Partial<GIF>): Uint8Array {
   writeByte(0) // pixel aspect ratio - assume 1:1
 
   // Global Color Table
-  writeBytes(gif.colors?.flat() ?? [])
-  const n = (3 * 256) - (gif.colors?.length ?? 0)
+  writeBytes(gif.colorTable?.flat() ?? [])
+  const n = (3 * 256) - (gif.colorTable?.length ?? 0)
   for (let i = 0; i < n; i++) {
     writeByte(0)
   }
@@ -64,8 +64,8 @@ export function encode(options: Partial<GIF>): Uint8Array {
   writeByte(EXTENSION_APPLICATION_BLOCK_SIZE) // block size
   writeString('NETSCAPE2.0') // app id + auth code
   writeByte(3) // sub-block size
-  writeByte(1) // loop sub-block id
-  writeUnsigned(gif.loop) // loop count (extra iterations, 0=repeat forever)
+  writeByte(gif.looped ? 1 : 0) // loop sub-block id
+  writeUnsigned(gif.loopCount ?? 0) // loop count (extra iterations, 0=repeat forever)
   writeByte(0) // block terminator
 
   gif.frames.forEach((frame) => {
@@ -73,23 +73,23 @@ export function encode(options: Partial<GIF>): Uint8Array {
     writeByte(EXTENSION) // extension introducer
     writeByte(EXTENSION_GRAPHIC_CONTROL) // GCE label
     writeByte(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
-    let hasTransparentIndex, disposal
-    if (frame.graphicControl?.transparentIndex) {
-      hasTransparentIndex = 1
+    let transparent, disposal
+    if (frame.graphicControl?.transparent) {
+      transparent = 1
       disposal = 2 // force clear if using transparent color
     } else {
-      hasTransparentIndex = 0
+      transparent = 0
       disposal = 0 // dispose = no action
     }
-    if (frame.graphicControl && frame.graphicControl?.disposal >= 0) {
-      disposal = frame.graphicControl?.disposal & 7 // user override
+    if (frame.disposal) {
+      disposal = frame.disposal & 7 // user override
     }
     // <Packed Fields>
     // 1-3 : reserved = 0
     // 4-6 : disposal
     // 7   : user input flag = 0
     // 8   : transparency flag
-    writeByte(parseInt(`000${ Number(disposal).toString(2).padStart(3, '0') }0${ hasTransparentIndex }`, 2))
+    writeByte(parseInt(`000${ Number(disposal).toString(2).padStart(3, '0') }0${ transparent }`, 2))
     writeUnsigned(frame.delay / 10) // delay x 1/100 sec
     writeByte(frame.graphicControl?.transparentIndex ?? 0) // transparent color index
     writeByte(0) // block terminator
@@ -101,7 +101,7 @@ export function encode(options: Partial<GIF>): Uint8Array {
     writeUnsigned(frame.width) // image size
     writeUnsigned(frame.height)
     // <Packed Fields>
-    if (frame.colors?.length) {
+    if (frame.colorTable?.length) {
       // 1   : local color table = 1
       // 2   : interlace = 0
       // 3   : sorted = 0
@@ -110,8 +110,8 @@ export function encode(options: Partial<GIF>): Uint8Array {
       writeByte(parseInt('10000111', 2))
 
       // Local Color Table
-      writeBytes(frame.colors.flat())
-      const n = (3 * 256) - (frame.colors.length)
+      writeBytes(frame.colorTable.flat())
+      const n = (3 * 256) - (frame.colorTable.length)
       for (let i = 0; i < n; i++) {
         writeByte(0)
       }
