@@ -33,7 +33,11 @@ export interface PlainText {
   data: string
 }
 
-export type RGB = number[]
+// [R, G, B]
+export type RGB = [number, number, number]
+
+// [begin, length]
+export type ImageSubBlockRange = [number, number]
 
 // Image Descriptor
 export interface Frame {
@@ -55,7 +59,7 @@ export interface Frame {
   minCodeSize: number
 
   // Image Data
-  imageData: { begin: number; end: number }[]
+  imageData: ImageSubBlockRange[]
 
   // Unit: ms
   delay: number
@@ -95,6 +99,4 @@ export interface GIF89a extends GIF87a {
 
 export interface GIF extends GIF89a {
   version: '89a' | '87a'
-
-  readFrame(index: number): ImageData
 }

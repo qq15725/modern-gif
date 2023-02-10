@@ -10,11 +10,9 @@ import {
   IMAGE_DESCRIPTOR,
   SIGNATURE,
   TRAILER,
-  VERSIONS,
+  VERSIONS, byteToBits,
 } from './utils'
-import { lzwDecode } from './lzw'
-import { deinterlace } from './deinterlace'
-import type { Application, Frame, GIF, GraphicControl, PlainText } from './types'
+import type { Application, Frame, GIF, GraphicControl, PlainText, RGB } from './types'
 
 export function decode(dataView: Uint8Array): GIF {
   const gif = {} as GIF
@@ -24,8 +22,9 @@ export function decode(dataView: Uint8Array): GIF {
   // utils
   const readByte = () => dataView[cursor++]
   const readBytes = (length: number) => dataView.subarray(cursor, cursor += length)
-  const readString = (bytesLength: number) => Array.from(readBytes(bytesLength)).map(val => String.fromCharCode(val)).join('')
+  const readString = (length: number) => Array.from(readBytes(length)).map(val => String.fromCharCode(val)).join('')
   const readUnsigned = () => new Uint16Array(dataView.buffer.slice(cursor, cursor += 2))[0]
+  const readColors = (length: number) => Array.from({ length }, () => Array.from(readBytes(3)) as RGB)
   const readData = () => {
     let str = ''
     while (true) {
@@ -35,7 +34,6 @@ export function decode(dataView: Uint8Array): GIF {
     }
     return str
   }
-  const byteToBits = (value: number) => value.toString(2).padStart(8, '0').split('').map(v => Number(v))
 
   // Header
   const signature = readString(3)
@@ -61,7 +59,7 @@ export function decode(dataView: Uint8Array): GIF {
 
   // Global Color Table
   if (gif.globalColorTable) {
-    gif.colors = Array.from({ length: gif.colorTableSize }, () => Array.from(readBytes(3)))
+    gif.colors = readColors(gif.colorTableSize)
   }
 
   gif.loop = 0
@@ -91,19 +89,17 @@ export function decode(dataView: Uint8Array): GIF {
 
       // Local Color Table
       if (frame.localColorTable) {
-        frame.colors = Array.from({ length: frame.colorTableSize }, () => Array.from(readBytes(3)))
+        frame.colors = readColors(frame.colorTableSize)
       }
 
       // Image Data
       frame.minCodeSize = readByte()
       frame.imageData = []
       while (true) {
-        const byteLength = readByte()
-        if (byteLength === 0) break
-        frame.imageData.push({
-          begin: cursor,
-          end: cursor += byteLength,
-        })
+        const length = readByte()
+        if (length === 0) break
+        frame.imageData.push([cursor, length])
+        cursor += length
       }
 
       gif.frames.push(frame)
@@ -183,45 +179,5 @@ export function decode(dataView: Uint8Array): GIF {
     console.warn(`Unknown gif block: 0x${ flag.toString(16) }`)
   }
 
-  gif.readFrame = (index: number) => readFrame(dataView, gif, index)
-
   return gif
-}
-
-export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
-  const frame = gif.frames[index]
-  if (!frame) {
-    throw new Error(`This index is abnormal. index: ${ index }`)
-  }
-  const {
-    imageData,
-    width,
-    height,
-    colors = gif.colors,
-    minCodeSize,
-    interlaced,
-  } = frame
-  const imageDataView = new Uint8Array(
-    imageData.reduce((total, { begin, end }) => total + (end - begin), 0),
-  )
-  let offset = 0
-  imageData.forEach(({ begin, end }) => {
-    const subBlockView = dataView.subarray(begin, end)
-    imageDataView.set(subBlockView, offset)
-    offset += subBlockView.byteLength
-  })
-  let indexes = lzwDecode(minCodeSize, imageDataView, width * height)
-  if (interlaced) {
-    indexes = deinterlace(indexes, width)
-  }
-  const pixels = new Uint8ClampedArray(width * height * 4)
-  indexes.forEach((colorIndex, index) => {
-    const color = colors?.[colorIndex] ?? [0, 0, 0]
-    index *= 4
-    pixels[index] = color[0]
-    pixels[index + 1] = color[1]
-    pixels[index + 2] = color[2]
-    pixels[index + 3] = colorIndex === frame.graphicControl?.transparentIndex ? 0 : 255
-  })
-  return new ImageData(pixels, width, height)
 }

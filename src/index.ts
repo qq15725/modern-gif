@@ -1,3 +1,5 @@
 export * from './decode'
 export * from './encode'
+export * from './read-frame'
+export * from './read-frames'
 export * from './types'
