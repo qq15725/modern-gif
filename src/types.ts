@@ -43,11 +43,10 @@ export interface Frame {
   height: number
   // <Packed Fields>
   localColorTable: boolean
-  colorTableSize: number
   interlaced: boolean
   colorSorted: boolean
   reserved: number
-  paletteIsSorted?: boolean
+  colorTableSize: number
 
   // Local Color Table
   colors?: RGB[]
@@ -56,11 +55,12 @@ export interface Frame {
   minCodeSize: number
 
   // Image Data
-  image: { begin: number; end: number }[]
+  imageData: { begin: number; end: number }[]
 
   // Unit: ms
   delay: number
 
+  // 89a
   // Extensions
   application?: Application
   graphicControl?: GraphicControl
@@ -68,10 +68,7 @@ export interface Frame {
   plainText?: PlainText
 }
 
-export interface GIF {
-  // Header
-  version: '87a' | '89a'
-
+export interface GIF87a {
   // Logical Screen Descriptor
   width: number
   height: number
@@ -86,12 +83,18 @@ export interface GIF {
   // Global Color Table
   colors?: RGB[]
 
+  // Image Descriptor
+  frames: Frame[]
+}
+
+export interface GIF89a extends GIF87a {
   // Application Extension
   // NETSCAPE2.0
   loop: number
+}
 
-  // Image Descriptor
-  frames: Frame[]
+export interface GIF extends GIF89a {
+  version: '89a' | '87a'
 
   readFrame(index: number): ImageData
 }

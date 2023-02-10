@@ -96,11 +96,11 @@ export function decode(dataView: Uint8Array): GIF {
 
       // Image Data
       frame.minCodeSize = readByte()
-      frame.image = []
+      frame.imageData = []
       while (true) {
         const byteLength = readByte()
         if (byteLength === 0) break
-        frame.image.push({
+        frame.imageData.push({
           begin: cursor,
           end: cursor += byteLength,
         })
@@ -194,7 +194,7 @@ export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
     throw new Error(`This index is abnormal. index: ${ index }`)
   }
   const {
-    image,
+    imageData,
     width,
     height,
     colors = gif.colors,
@@ -202,10 +202,10 @@ export function readFrame(dataView: Uint8Array, gif: GIF, index: number) {
     interlaced,
   } = frame
   const imageDataView = new Uint8Array(
-    image.reduce((total, { begin, end }) => total + (end - begin), 0),
+    imageData.reduce((total, { begin, end }) => total + (end - begin), 0),
   )
   let offset = 0
-  image.forEach(({ begin, end }) => {
+  imageData.forEach(({ begin, end }) => {
     const subBlockView = dataView.subarray(begin, end)
     imageDataView.set(subBlockView, offset)
     offset += subBlockView.byteLength

@@ -13,7 +13,7 @@ import type { GIF } from './types'
 export function encode(options: Partial<GIF>): Uint8Array {
   const gif = {
     version: '89a',
-    palette: [] as any,
+    colors: [] as any,
     ...options,
   } as GIF
 
@@ -52,8 +52,8 @@ export function encode(options: Partial<GIF>): Uint8Array {
   writeByte(0) // pixel aspect ratio - assume 1:1
 
   // Global Color Table
-  writeBytes(gif.palette?.flat() ?? [])
-  const n = (3 * 256) - (gif.palette?.length ?? 0)
+  writeBytes(gif.colors?.flat() ?? [])
+  const n = (3 * 256) - (gif.colors?.length ?? 0)
   for (let i = 0; i < n; i++) {
     writeByte(0)
   }
@@ -101,7 +101,7 @@ export function encode(options: Partial<GIF>): Uint8Array {
     writeUnsigned(frame.width) // image size
     writeUnsigned(frame.height)
     // <Packed Fields>
-    if (frame.palette?.length) {
+    if (frame.colors?.length) {
       // 1   : local color table = 1
       // 2   : interlace = 0
       // 3   : sorted = 0
@@ -110,8 +110,8 @@ export function encode(options: Partial<GIF>): Uint8Array {
       writeByte(parseInt('10000111', 2))
 
       // Local Color Table
-      writeBytes(frame.palette.flat())
-      const n = (3 * 256) - (frame.palette.length)
+      writeBytes(frame.colors.flat())
+      const n = (3 * 256) - (frame.colors.length)
       for (let i = 0; i < n; i++) {
         writeByte(0)
       }
