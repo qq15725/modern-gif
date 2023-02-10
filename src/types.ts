@@ -2,7 +2,7 @@
 export interface Application {
   identifier: string
   code: string
-  data: string
+  data: number[]
 }
 
 // Graphic Control Extension
@@ -11,7 +11,7 @@ export interface GraphicControl {
   delayTime: number
   transparentIndex: number
   // <Packed Fields>
-  reserved: number
+  reserved: 1 | 2 | 3 | 4 | 5 | 6 | 7
   disposal: 1 | 2 | 3 | 4 | 5 | 6 | 7
   userInput: boolean
   transparent: boolean
@@ -30,14 +30,14 @@ export interface PlainText {
   cellHeight: number
   colorIndex: number
   backgroundColorIndex: number
-  data: string
+  data: number[]
 }
 
 // [R, G, B]
 export type RGB = [number, number, number]
 
 // [begin, length]
-export type ImageSubBlockRange = [number, number]
+export type ImageDataPosition = [number, number]
 
 // Image Descriptor
 export interface Frame {
@@ -48,18 +48,18 @@ export interface Frame {
   // <Packed Fields>
   localColorTable: boolean
   interlaced: boolean
-  colorSorted: boolean
-  reserved: number
+  reserved: 1 | 2 | 3
+  colorTableSorted: boolean
   colorTableSize: number
 
   // Local Color Table
-  colors?: RGB[]
+  colorTable?: RGB[]
 
   // LZW Minimum Code Size
-  minCodeSize: number
+  lzwMinCodeSize: number
 
   // Image Data
-  imageData: ImageSubBlockRange[]
+  imageDataPositions: ImageDataPosition[]
 
   // Unit: ms
   delay: number
@@ -76,16 +76,17 @@ export interface GIF87a {
   // Logical Screen Descriptor
   width: number
   height: number
+  // <Packed Fields> start
+  globalColorTable: boolean
+  colorResoluTion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+  colorTableSorted: boolean
+  colorTableSize: number
+  // <Packed Fields> end
   backgroundColorIndex: number
   pixelAspectRatio: number
-  // <Packed Fields>
-  globalColorTable: boolean
-  colorResoluTion: number
-  colorTableSize: number
-  colorSorted?: boolean
 
   // Global Color Table
-  colors?: RGB[]
+  colorTable?: RGB[]
 
   // Image Descriptor
   frames: Frame[]
@@ -94,7 +95,8 @@ export interface GIF87a {
 export interface GIF89a extends GIF87a {
   // Application Extension
   // NETSCAPE2.0
-  loop: number
+  looped?: boolean
+  loopCount?: number
 }
 
 export interface GIF extends GIF89a {
