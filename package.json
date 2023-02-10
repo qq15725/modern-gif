@@ -1,7 +1,7 @@
 {
   "name": "modern-gif",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "packageManager": "pnpm@7.9.0",
   "description": "Fastest GIF decoder / encoder. using TypeScript.",
   "author": "wxm",
