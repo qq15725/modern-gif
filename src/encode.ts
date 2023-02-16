@@ -10,7 +10,7 @@ import {
 } from './utils'
 import { createEncoderContext } from './create-encoder-context'
 import { writeDataByLzw } from './write-data-by-lzw'
-import { getPaletteByMmcq } from './get-palette-by-mmcq'
+import { createColorTableByMmcq } from './create-color-table-by-mmcq'
 import type { GIF } from './gif'
 
 export function encode(options: Partial<GIF>): Uint8Array {
@@ -112,7 +112,7 @@ export function encode(options: Partial<GIF>): Uint8Array {
 
     // color table
     if (!colorTable && imageData.length) {
-      colorTable = getPaletteByMmcq(imageData, 255)
+      colorTable = createColorTableByMmcq(imageData, 255)
       if (colorTable.length < 256) {
         const diff = 256 - colorTable.length
         for (let i = 0; i < diff; i++) {
