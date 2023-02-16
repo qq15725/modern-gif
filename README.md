@@ -60,11 +60,15 @@ const gifData = encode({
   height: 40,
   frames: [
     {
-      imageData: new Uint8ClampedArray(40 * 40 * 4),
+      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 222),
       delay: 100,
     },
     {
-      imageData: new Uint8ClampedArray(40 * 40 * 4).map(val => 255),
+      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 233),
+      delay: 100,
+    },
+    {
+      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 244),
       delay: 100,
     },
   ],
