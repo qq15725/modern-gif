@@ -20,7 +20,7 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
       chunks[cursor[0]][cursor[1]] = val
     } else {
       if (chunkCursor >= chunkSize) {
-        chunks[chunkIndex++] = new Uint8Array(chunkSize)
+        chunks[++chunkIndex] = new Uint8Array(chunkSize)
         chunkCursor = 0
       }
       chunks[chunkIndex][chunkCursor++] = val

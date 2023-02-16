@@ -21,7 +21,7 @@
 
 <body>
   <script type="module" async>
-    import { decode, readFrame, readFrames } from './src'
+    import { decode, encode, readFrame, readFrames } from './src'
 
     const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
@@ -52,6 +52,25 @@
       context2d.putImageData(frame, 0, 0)
       document.body.append(canvas)
     }
+
+    const gifData = encode({
+      width: 40,
+      height: 40,
+      frames: [
+        {
+          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 222),
+          delay: 100,
+        },
+        {
+          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 233),
+          delay: 100,
+        },
+        {
+          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 244),
+          delay: 100,
+        },
+      ],
+    })
   </script>
 </body>
 </html>
