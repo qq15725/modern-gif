@@ -17,6 +17,8 @@
   </style>
 </head>
 
+<button>ReEncode</button>
+
 <img src="/test/assets/test.gif" />
 
 <body>
@@ -37,9 +39,11 @@
 
     // eslint-disable-next-line no-console
     console.time('read frames')
-    readFrames(data, gif).forEach(applyFrame)
+    const frames = readFrames(data, gif)
     // eslint-disable-next-line no-console
     console.timeEnd('read frames')
+
+    frames.forEach(applyFrame)
 
     // eslint-disable-next-line no-console
     console.log(gif)
@@ -53,24 +57,26 @@
       document.body.append(canvas)
     }
 
-    const gifData = encode({
-      width: 40,
-      height: 40,
-      frames: [
-        {
-          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 222),
-          delay: 100,
-        },
-        {
-          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 233),
-          delay: 100,
-        },
-        {
-          imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 244),
-          delay: 100,
-        },
-      ],
-    })
+    document.querySelector('button').onclick = () => {
+      // eslint-disable-next-line no-console
+      console.time('encode')
+      const gifData = encode({
+        width: gif.width,
+        height: gif.height,
+        frames: frames.map(frame => {
+          return {
+            imageData: frame.data,
+          }
+        }),
+      })
+      // eslint-disable-next-line no-console
+      console.timeEnd('encode')
+
+      const blob = new Blob([gifData], { type: 'image/gif' })
+      const img = new Image()
+      img.src = URL.createObjectURL(blob)
+      document.body.append(img)
+    }
   </script>
 </body>
 </html>
