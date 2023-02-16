@@ -11,6 +11,7 @@ import {
   SIGNATURE,
   TRAILER,
   VERSIONS,
+  consoleWarn,
 } from './utils'
 import type { Application, Frame, GIF, GraphicControl, PlainText, RGB } from './gif'
 
@@ -48,13 +49,14 @@ export function decode(data: Uint8Array): GIF {
   // Logical Screen Descriptor
   gif.width = readUnsigned()
   gif.height = readUnsigned()
-  // <Packed Fields> start
+  // ↓ <Packed Fields>
   const bits = read8Bits()
   gif.globalColorTable = Boolean(bits[0])
   gif.colorResoluTion = (parseInt(`${ bits[1] }${ bits[2] }${ bits[3] }`, 2) + 1) as any
   gif.colorTableSorted = Boolean(bits[4])
-  gif.colorTableSize = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
-  // <Packed Fields> end
+  const colorTableSize = parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2)
+  gif.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
+  // ↑ <Packed Fields>
   gif.backgroundColorIndex = readByte()
   gif.pixelAspectRatio = readByte()
 
@@ -75,14 +77,15 @@ export function decode(data: Uint8Array): GIF {
       frame.top = readUnsigned()
       frame.width = readUnsigned()
       frame.height = readUnsigned()
-      // <Packed Fields> start
+      // ↓ <Packed Fields>
       const bits = read8Bits()
       frame.localColorTable = Boolean(bits[0])
       frame.interlaced = Boolean(bits[1])
       frame.colorTableSorted = Boolean(bits[2])
       frame.reserved = parseInt(`${ bits[3] }${ bits[4] }`, 2) as any
-      frame.colorTableSize = Math.pow(2, parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2) + 1)
-      // <Packed Fields> end
+      const colorTableSize = parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2)
+      frame.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
+      // ↑ <Packed Fields>
 
       // Local Color Table
       if (frame.localColorTable) {
@@ -134,13 +137,13 @@ export function decode(data: Uint8Array): GIF {
       if (extensionFlag === EXTENSION_GRAPHIC_CONTROL) {
         if (readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
         const graphicControl = {} as GraphicControl
-        // <Packed Fields> start
+        // ↓ <Packed Fields>
         const bits = read8Bits()
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2) as any
         frame.disposal = graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
         graphicControl.userInput = Boolean(bits[6])
         graphicControl.transparent = Boolean(bits[7])
-        // <Packed Fields> end
+        // ↑ <Packed Fields>
         graphicControl.delayTime = readUnsigned()
         graphicControl.transparentIndex = readByte()
         readBlock()
@@ -166,13 +169,13 @@ export function decode(data: Uint8Array): GIF {
         continue
       }
 
-      console.warn(`Unknown gif extension block: 0x${ extensionFlag.toString(16) }`)
+      consoleWarn(`Unknown extension block: 0x${ extensionFlag.toString(16) }`)
       continue
     }
 
     if (flag === TRAILER) break
 
-    console.warn(`Unknown gif block: 0x${ flag.toString(16) }`)
+    consoleWarn(`Unknown block: 0x${ flag.toString(16) }`)
   }
 
   return gif

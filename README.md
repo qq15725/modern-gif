@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/npm/v/modern-gif.svg" alt="Version">
   </a>
   <a href="https://www.npmjs.com/package/modern-gif">
-    <img src="https://img.shields.io/npm/dw/modern-gif" alt="Downloads">
+    <img src="https://img.shields.io/npm/dm/modern-gif" alt="Downloads">
   </a>
   <a href="https://github.com/qq15725/modern-gif/issues">
     <img src="https://img.shields.io/github/issues/qq15725/modern-gif" alt="Issues">
@@ -48,6 +48,30 @@ window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/a
 
     console.log(gif)
   })
+```
+
+### Encode
+
+```ts
+import { encode } from 'modern-gif'
+
+const gifData = encode({
+  width: 40,
+  height: 40,
+  frames: [
+    {
+      imageData: new Uint8ClampedArray(40 * 40 * 4),
+      delay: 100,
+    },
+    {
+      imageData: new Uint8ClampedArray(40 * 40 * 4).map(val => 255),
+      delay: 100,
+    },
+  ],
+})
+
+const blob = new Blob([gifData], { type: 'image/gif' })
+window.open(URL.createObjectURL(blob))
 ```
 
 ## Types

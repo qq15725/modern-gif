@@ -61,6 +61,8 @@ export interface Frame {
 
   // Image Data
   imageDataPositions: ImageDataPosition[]
+  // This is only used for `encode`
+  imageData?: Uint8ClampedArray
 
   // Extensions (89a)
   application?: Application

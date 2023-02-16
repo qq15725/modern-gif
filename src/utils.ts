@@ -1,3 +1,7 @@
+// Constants
+export const PREFIX = '[modern-gif]'
+
+// GIF
 export const SIGNATURE = 'GIF'
 export const VERSIONS = ['87a', '89a']
 export const IMAGE_DESCRIPTOR = 0x2C
@@ -10,3 +14,6 @@ export const EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE = 4
 export const EXTENSION_PLAIN_TEXT = 0x01
 export const EXTENSION_PLAIN_TEXT_BLOCK_SIZE = 0x01
 export const TRAILER = 0x3B
+
+// Console
+export const consoleWarn = (...args: any[]) => console.warn(PREFIX, ...args)
