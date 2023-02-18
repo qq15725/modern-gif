@@ -1,3 +1,12 @@
+## [0.0.8](https://github.com/qq15725/modern-gif/compare/v0.0.7...v0.0.8) (2023-02-18)
+
+
+### Features
+
+* add encode-frame.worker.js ([f7c1b75](https://github.com/qq15725/modern-gif/commit/f7c1b75c7be356c01cb8bd4ccdeebbb6c17f09f3))
+
+
+
 ## [0.0.7](https://github.com/qq15725/modern-gif/compare/v0.0.6...v0.0.7) (2023-02-18)
 
 
