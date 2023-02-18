@@ -5,6 +5,7 @@
     "module": "esnext", /* 指定模块代码生成: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 或 'ESNext'。 */
     "lib": [ /* 指定要包含在编译中的库文件。 */
       "esnext",
+      "webworker",
       "dom",
       "dom.iterable"
     ],

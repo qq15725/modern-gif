@@ -25,7 +25,8 @@
       "types": "./types/index.d.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
-    }
+    },
+    "./*": "./*"
   },
   "main": "dist/index.mjs",
   "module": "dist/index.mjs",
@@ -47,7 +48,8 @@
     "dev": "vite",
     "lint": "eslint src",
     "test": "vitest --no-threads --no-isolate",
-    "build": "vite build && tsc --project tsconfig.build.json",
+    "build:worker": "vite build --config vite.worker.config.ts",
+    "build": "vite build && pnpm build:worker && tsc --project tsconfig.build.json",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
   },
