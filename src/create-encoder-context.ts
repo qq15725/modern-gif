@@ -15,7 +15,7 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
     chunkCursor = cursor[1]
   }
   const calculateDistance = (cursor: EncoderContextCursor) => (chunkIndex * chunkSize + chunkCursor) - (cursor[0] * chunkSize + cursor[1])
-  const writeByte = (val: number, cursor?: EncoderContextCursor) => {
+  const writeUint8 = (val: number, cursor?: EncoderContextCursor) => {
     if (cursor) {
       chunks[cursor[0]][cursor[1]] = val
     } else {
@@ -26,9 +26,9 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
       chunks[chunkIndex][chunkCursor++] = val
     }
   }
-  const writeBytes = (value: number[]) => value.forEach(val => writeByte(val))
-  const writeString = (value: string) => value.split('').forEach((_, i) => writeByte(value.charCodeAt(i)))
-  const writeUnsigned = (value: number) => writeBytes([value & 0xFF, (value >> 8) & 0xFF])
+  const writeUint8Bytes = (value: number[]) => value.forEach(val => writeUint8(val))
+  const writeUTFBytes = (value: string) => value.split('').forEach((_, i) => writeUint8(value.charCodeAt(i)))
+  const writeUint16LE = (value: number) => writeUint8Bytes([value & 0xFF, (value >> 8) & 0xFF])
   const exportData = () => {
     chunks[chunkIndex] = chunks[chunkIndex].slice(0, chunkCursor)
 
@@ -52,10 +52,10 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
     setCursor,
     calculateDistance,
 
-    writeByte,
-    writeBytes,
-    writeString,
-    writeUnsigned,
+    writeUint8,
+    writeUint8Bytes,
+    writeUTFBytes,
+    writeUint16LE,
 
     exportData,
   }

@@ -105,4 +105,6 @@ export interface GIF89a extends GIF87a {
 
 export interface GIF extends GIF89a {
   version: '89a' | '87a'
+
+  colorTableGeneration?: 'MMCQ' | 'NeuQuant'
 }

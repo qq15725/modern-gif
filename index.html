@@ -6,13 +6,13 @@
   <style>
     canvas {
       margin: 8px;
-      width: 100px;
+      width: 200px;
     }
 
     img {
       display: block;
       margin: 8px;
-      width: 100px;
+      width: 200px;
     }
   </style>
 </head>
@@ -23,7 +23,7 @@
 
 <body>
   <script type="module" async>
-    import { decode, encode, readFrame, readFrames } from './src'
+    import { decode, encode, readFrames } from './src'
 
     const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
@@ -35,7 +35,8 @@
     // eslint-disable-next-line no-console
     console.timeEnd('decode')
 
-    applyFrame(readFrame(data, gif, 1))
+    // eslint-disable-next-line no-console
+    console.log(gif)
 
     // eslint-disable-next-line no-console
     console.time('read frames')
@@ -43,19 +44,14 @@
     // eslint-disable-next-line no-console
     console.timeEnd('read frames')
 
-    frames.forEach(applyFrame)
-
-    // eslint-disable-next-line no-console
-    console.log(gif)
-
-    function applyFrame(frame) {
-      const canvas = document.createElement('canvas')
-      const context2d = canvas.getContext('2d')
-      canvas.width = frame.width
-      canvas.height = frame.height
-      context2d.putImageData(frame, 0, 0)
-      document.body.append(canvas)
-    }
+    // frames.forEach(frame => {
+    //   const canvas = document.createElement('canvas')
+    //   const context2d = canvas.getContext('2d')
+    //   canvas.width = frame.width
+    //   canvas.height = frame.height
+    //   context2d.putImageData(frame, 0, 0)
+    //   document.body.append(canvas)
+    // })
 
     document.querySelector('button').onclick = () => {
       // eslint-disable-next-line no-console
@@ -63,11 +59,8 @@
       const gifData = encode({
         width: gif.width,
         height: gif.height,
-        frames: frames.map(frame => {
-          return {
-            imageData: frame.data,
-          }
-        }),
+        frames: frames.map(frame => ({ imageData: frame.data })),
+        colorTableGeneration: 'NeuQuant',
       })
       // eslint-disable-next-line no-console
       console.timeEnd('encode')

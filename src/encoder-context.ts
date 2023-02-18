@@ -6,10 +6,10 @@ export interface EncoderContext {
   setCursor(cursor: EncoderContextCursor): void
   calculateDistance(cursor: EncoderContextCursor): number
 
-  writeByte(value: number, cursor?: EncoderContextCursor): void
-  writeBytes(value: number[]): void
-  writeString(value: string): void
-  writeUnsigned(value: number): void
+  writeUint8(value: number, cursor?: EncoderContextCursor): void
+  writeUint8Bytes(value: number[]): void
+  writeUTFBytes(value: string): void
+  writeUint16LE(value: number): void
 
   exportData(): Uint8Array
 }

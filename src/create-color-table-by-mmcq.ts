@@ -203,8 +203,12 @@ function medianCutApply(histogram: number[], vbox: VBox) {
       : doCut('b')
 }
 
-export function createColorTableByMmcq(pixels: Uint8ClampedArray, maxColors: number): RGB[] {
-  if (!pixels.length || maxColors < 2 || maxColors > 256) return []
+export function createColorTableByMmcq(pixels: Uint8ClampedArray, maxColors: number): { colorTable: RGB[]; findClosestRGB: undefined } {
+  const pixelsLength = pixels.length
+
+  if (!pixelsLength || maxColors < 2 || maxColors > 256) {
+    return { colorTable: [], findClosestRGB: undefined }
+  }
 
   let rmin = 1000000
   let rmax = 0
@@ -213,7 +217,7 @@ export function createColorTableByMmcq(pixels: Uint8ClampedArray, maxColors: num
   let bmin = 1000000
   let bmax = 0
   const histogram = new Array(1 << (3 * sigbits))
-  for (let i = 0; i < pixels.length; i += 4) {
+  for (let i = 0; i < pixelsLength; i += 4) {
     const rval = pixels[i] >> rshift
     const gval = pixels[i + 1] >> rshift
     const bval = pixels[i + 2] >> rshift
@@ -274,5 +278,9 @@ export function createColorTableByMmcq(pixels: Uint8ClampedArray, maxColors: num
   while (pQueue2.size()) {
     colorTable.push(pQueue2.pop()!.avg())
   }
-  return colorTable
+
+  return {
+    colorTable,
+    findClosestRGB: undefined,
+  }
 }

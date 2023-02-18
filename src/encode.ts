@@ -11,10 +11,12 @@ import {
 import { createEncoderContext } from './create-encoder-context'
 import { writeDataByLzw } from './write-data-by-lzw'
 import { createColorTableByMmcq } from './create-color-table-by-mmcq'
+import { createColorTableByNeuquant } from './create-color-table-by-neuquant'
 import type { GIF } from './gif'
 
 export function encode(options: Partial<GIF>): Uint8Array {
   const gif = {
+    colorTableGeneration: 'NeuQuant',
     version: '89a',
     width: 0,
     height: 0,
@@ -49,42 +51,42 @@ export function encode(options: Partial<GIF>): Uint8Array {
   const context = createEncoderContext()
 
   const {
-    writeString,
-    writeByte,
-    writeBytes,
-    writeUnsigned,
+    writeUTFBytes,
+    writeUint8,
+    writeUint8Bytes,
+    writeUint16LE,
     exportData,
   } = context
 
   // Header
-  writeString(SIGNATURE)
-  writeString(gif.version)
+  writeUTFBytes(SIGNATURE)
+  writeUTFBytes(gif.version)
 
   // Logical Screen Descriptor
-  writeUnsigned(gif.width)
-  writeUnsigned(gif.height)
+  writeUint16LE(gif.width)
+  writeUint16LE(gif.height)
   // <Packed Fields>
   // 1   : global color table flag = 1
   // 2-4 : color resolution = 7
   // 5   : global color table sort flag = 0
   // 6-8 : global color table size
-  writeByte(parseInt(`${ colorTableSize ? 1 : 0 }1110${ colorTableSize.toString(2).padStart(3, '0') }`, 2))
-  writeByte(gif.backgroundColorIndex) // background color index
-  writeByte(gif.pixelAspectRatio) // pixel aspect ratio - assume 1:1
+  writeUint8(parseInt(`${ colorTableSize ? 1 : 0 }1110${ colorTableSize.toString(2).padStart(3, '0') }`, 2))
+  writeUint8(gif.backgroundColorIndex) // background color index
+  writeUint8(gif.pixelAspectRatio) // pixel aspect ratio - assume 1:1
 
   // Global Color Table
-  writeBytes(gif.colorTable?.flat() ?? [])
+  writeUint8Bytes(gif.colorTable?.flat() ?? [])
 
   // Netscape block
   if (gif.looped) {
-    writeByte(EXTENSION) // extension introducer
-    writeByte(EXTENSION_APPLICATION) // app extension label
-    writeByte(EXTENSION_APPLICATION_BLOCK_SIZE) // block size
-    writeString('NETSCAPE2.0') // app id + auth code
-    writeByte(3) // sub-block size
-    writeByte(1) // loop sub-block id
-    writeUnsigned(gif.loopCount ?? 0) // loop count (extra iterations, 0=repeat forever)
-    writeByte(0) // block terminator
+    writeUint8(EXTENSION) // extension introducer
+    writeUint8(EXTENSION_APPLICATION) // app extension label
+    writeUint8(EXTENSION_APPLICATION_BLOCK_SIZE) // block size
+    writeUTFBytes('NETSCAPE2.0') // app id + auth code
+    writeUint8(3) // sub-block size
+    writeUint8(1) // loop sub-block id
+    writeUint16LE(gif.loopCount ?? 0) // loop count (extra iterations, 0=repeat forever)
+    writeUint8(0) // block terminator
   }
 
   gif.frames.forEach((frame) => {
@@ -103,7 +105,7 @@ export function encode(options: Partial<GIF>): Uint8Array {
     } = frame
 
     let transparent = frame.graphicControl?.transparent
-    let transparentIndex = frame.graphicControl?.transparentIndex
+    let transparentIndex = frame.graphicControl?.transparentIndex ?? 255
 
     if (left < 0 || left > 65535) throw new Error('Left invalid.')
     if (top < 0 || top > 65535) throw new Error('Top invalid.')
@@ -111,8 +113,13 @@ export function encode(options: Partial<GIF>): Uint8Array {
     if (height <= 0 || height > 65535) throw new Error('Height invalid.')
 
     // color table
-    if (!colorTable && imageData.length) {
-      colorTable = createColorTableByMmcq(imageData, 255)
+    let findClosestRGB: any | undefined
+    if (!colorTable) {
+      const res = gif.colorTableGeneration === 'MMCQ'
+        ? createColorTableByMmcq(imageData, 255)
+        : createColorTableByNeuquant(imageData, 255)
+      colorTable = res.colorTable
+      findClosestRGB = res.findClosestRGB
       if (colorTable.length < 256) {
         const diff = 256 - colorTable.length
         for (let i = 0; i < diff; i++) {
@@ -131,21 +138,23 @@ export function encode(options: Partial<GIF>): Uint8Array {
     while (colorTableLength >>= 1) ++minCodeSize
     colorTableLength = 1 << minCodeSize // Now we can easily get it back.
 
-    function findClosestRGB(r: number, g: number, b: number) {
-      if (!colorTable) return -1
-      let minpos = 0
-      let dmin = 256 * 256 * 256
-      for (let index = 0; index < colorTableLength; index++) {
-        const dr = r - (colorTable[index][0] & 0xFF)
-        const dg = g - (colorTable[index][1] & 0xFF)
-        const db = b - (colorTable[index][2] & 0xFF)
-        const d = dr * dr + dg * dg + db * db
-        if (d < dmin) {
-          dmin = d
-          minpos = index
+    if (!findClosestRGB) {
+      findClosestRGB = (r: number, g: number, b: number) => {
+        if (!colorTable) return -1
+        let minpos = 0
+        let dmin = 256 * 256 * 256
+        for (let index = 0; index < colorTableLength; index++) {
+          const dr = r - (colorTable[index][0] & 0xFF)
+          const dg = g - (colorTable[index][1] & 0xFF)
+          const db = b - (colorTable[index][2] & 0xFF)
+          const d = dr * dr + dg * dg + db * db
+          if (d < dmin) {
+            dmin = d
+            minpos = index
+          }
         }
+        return minpos
       }
-      return minpos
     }
 
     const imageDataLength = imageData.length
@@ -154,18 +163,18 @@ export function encode(options: Partial<GIF>): Uint8Array {
       if (imageData[i + 3] === 0) {
         indexes[i / 4] = 255
       } else {
-        indexes[i / 4] = findClosestRGB(
+        indexes[i / 4] = findClosestRGB?.(
           imageData[i] & 0xFF,
           imageData[i + 1] & 0xFF,
           imageData[i + 2] & 0xFF,
-        )
+        ) ?? -1
       }
     }
 
     // Graphic control extension
-    writeByte(EXTENSION) // extension introducer
-    writeByte(EXTENSION_GRAPHIC_CONTROL) // GCE label
-    writeByte(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
+    writeUint8(EXTENSION) // extension introducer
+    writeUint8(EXTENSION_GRAPHIC_CONTROL) // GCE label
+    writeUint8(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
     if (transparent) {
       if (!transparentIndex || transparentIndex < 0 || transparentIndex >= colorTableLength) {
         throw new Error('Transparent color index.')
@@ -181,17 +190,17 @@ export function encode(options: Partial<GIF>): Uint8Array {
     // 4-6 : disposal
     // 7   : user input flag = 0
     // 8   : transparency flag
-    writeByte(parseInt(`000${ Number(disposal & 7).toString(2).padStart(3, '0') }0${ transparent ? 1 : 0 }`, 2))
-    writeUnsigned(delay / 10) // delay x 1/100 sec
-    writeByte(transparentIndex) // transparent color index
-    writeByte(0) // block terminator
+    writeUint8(parseInt(`000${ Number(disposal & 7).toString(2).padStart(3, '0') }0${ transparent ? 1 : 0 }`, 2))
+    writeUint16LE(delay / 10) // delay x 1/100 sec
+    writeUint8(transparentIndex) // transparent color index
+    writeUint8(0) // block terminator
 
     // Image descriptor
-    writeByte(IMAGE_DESCRIPTOR) // image separator
-    writeUnsigned(left) // image position x,y = 0,0
-    writeUnsigned(top)
-    writeUnsigned(width) // image size
-    writeUnsigned(height)
+    writeUint8(IMAGE_DESCRIPTOR) // image separator
+    writeUint16LE(left) // image position x,y = 0,0
+    writeUint16LE(top)
+    writeUint16LE(width) // image size
+    writeUint16LE(height)
     // <Packed Fields>
     if (colorTable?.length) {
       // 1   : local color table = 1
@@ -199,12 +208,12 @@ export function encode(options: Partial<GIF>): Uint8Array {
       // 3   : sorted = 0
       // 4-5 : reserved = 0
       // 6-8 : local color table size
-      writeByte(parseInt(`10000${ (minCodeSize - 1).toString(2).padStart(3, '0') }`, 2))
+      writeUint8(parseInt(`10000${ (minCodeSize - 1).toString(2).padStart(3, '0') }`, 2))
 
       // Local Color Table
-      writeBytes(colorTable.flat())
+      writeUint8Bytes(colorTable.flat())
     } else {
-      writeByte(0)
+      writeUint8(0)
     }
 
     // LZW
@@ -212,7 +221,7 @@ export function encode(options: Partial<GIF>): Uint8Array {
   })
 
   // Trailer
-  writeByte(TRAILER)
+  writeUint8(TRAILER)
 
   return exportData()
 }
