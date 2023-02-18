@@ -1,6 +1,20 @@
-import type { EncoderContext, EncoderContextCursor } from './encoder-context'
+// [chunkIndex, chunkCursor]
+export type WriterCursor = [number, number]
 
-export function createEncoderContext(options: { chunkSize?: number } = {}): EncoderContext {
+export interface Writer {
+  getCursor(): WriterCursor
+  setCursor(cursor: WriterCursor): void
+  calculateDistance(cursor: WriterCursor): number
+
+  writeUint8(value: number, cursor?: WriterCursor): void
+  writeUint8Bytes(value: Uint8Array | number[]): void
+  writeUTFBytes(value: string): void
+  writeUint16LE(value: number): void
+
+  exportUint8Array(): Uint8Array
+}
+
+export function createWriter(options: { chunkSize?: number } = {}): Writer {
   const {
     chunkSize = 4096,
   } = options
@@ -9,13 +23,13 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
   let chunkIndex = 0
   let chunkCursor = 0
 
-  const getCursor = () => [chunkIndex, chunkCursor] as EncoderContextCursor
-  const setCursor = (cursor: EncoderContextCursor) => {
+  const getCursor = () => [chunkIndex, chunkCursor] as WriterCursor
+  const setCursor = (cursor: WriterCursor) => {
     chunkIndex = cursor[0]
     chunkCursor = cursor[1]
   }
-  const calculateDistance = (cursor: EncoderContextCursor) => (chunkIndex * chunkSize + chunkCursor) - (cursor[0] * chunkSize + cursor[1])
-  const writeUint8 = (val: number, cursor?: EncoderContextCursor) => {
+  const calculateDistance = (cursor: WriterCursor) => (chunkIndex * chunkSize + chunkCursor) - (cursor[0] * chunkSize + cursor[1])
+  const writeUint8 = (val: number, cursor?: WriterCursor) => {
     if (cursor) {
       chunks[cursor[0]][cursor[1]] = val
     } else {
@@ -26,10 +40,11 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
       chunks[chunkIndex][chunkCursor++] = val
     }
   }
-  const writeUint8Bytes = (value: number[]) => value.forEach(val => writeUint8(val))
+  const writeUint8Bytes = (value: number[] | Uint8Array) => value.forEach(val => writeUint8(val))
   const writeUTFBytes = (value: string) => value.split('').forEach((_, i) => writeUint8(value.charCodeAt(i)))
   const writeUint16LE = (value: number) => writeUint8Bytes([value & 0xFF, (value >> 8) & 0xFF])
-  const exportData = () => {
+
+  const exportUint8Array = () => {
     chunks[chunkIndex] = chunks[chunkIndex].slice(0, chunkCursor)
 
     const data = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
@@ -57,6 +72,6 @@ export function createEncoderContext(options: { chunkSize?: number } = {}): Enco
     writeUTFBytes,
     writeUint16LE,
 
-    exportData,
+    exportUint8Array,
   }
 }

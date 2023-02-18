@@ -74,6 +74,7 @@ export interface Frame {
   index: number
   delay: number // unit: 1ms
   disposal: GraphicControl['disposal']
+  colorTableGeneration?: 'MMCQ' | 'NeuQuant'
 }
 
 export interface GIF87a {

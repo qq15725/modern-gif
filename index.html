@@ -23,7 +23,7 @@
 
 <body>
   <script type="module" async>
-    import { decode, encode, readFrames } from './src'
+    import { createEncoder, decode, encodeFrame, readFrames } from './src'
 
     const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
@@ -54,14 +54,23 @@
     // })
 
     document.querySelector('button').onclick = () => {
-      // eslint-disable-next-line no-console
-      console.time('encode')
-      const gifData = encode({
+      const encoder = createEncoder({
         width: gif.width,
         height: gif.height,
-        frames: frames.map(frame => ({ imageData: frame.data })),
         colorTableGeneration: 'NeuQuant',
       })
+      // eslint-disable-next-line no-console
+      console.time('encode')
+      frames.forEach(frame => {
+        encoder.write(
+          encodeFrame({
+            width: gif.width,
+            height: gif.height,
+            imageData: frame.data,
+          }),
+        )
+      })
+      const gifData = encoder.flush()
       // eslint-disable-next-line no-console
       console.timeEnd('encode')
 

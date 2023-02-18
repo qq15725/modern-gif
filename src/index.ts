@@ -1,5 +1,7 @@
+export * from './create-encoder'
 export * from './decode'
 export * from './encode'
+export * from './encode-frame'
 export * from './read-frame'
 export * from './read-frames'
 export * from './read-raw-frame'

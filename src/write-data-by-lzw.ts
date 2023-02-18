@@ -1,7 +1,7 @@
-import type { EncoderContext } from './encoder-context'
+import type { Writer } from './create-writer'
 
-export function writeDataByLzw(minCodeSize: number, data: Uint8Array, context: EncoderContext) {
-  const { writeUint8, getCursor, calculateDistance } = context
+export function writeDataByLzw(minCodeSize: number, data: Uint8Array, writer: Writer) {
+  const { writeUint8, getCursor, calculateDistance } = writer
 
   writeUint8(minCodeSize)
   let cur_subblock = getCursor()
