@@ -2,7 +2,7 @@
   "name": "modern-gif",
   "type": "module",
   "version": "0.0.6",
-  "packageManager": "pnpm@7.9.0",
+  "packageManager": "pnpm@7.26.2",
   "description": "Fastest GIF decoder / encoder. using TypeScript.",
   "author": "wxm",
   "license": "MIT",
@@ -44,18 +44,21 @@
     "types"
   ],
   "scripts": {
-    "build": "vite build && tsc --project tsconfig.build.json",
     "dev": "vite",
-    "lint": "eslint .",
-    "release": "bumpp package.json --commit \"chore(release): publish v%s\" --push --tag && pnpm publish"
+    "lint": "eslint src",
+    "test": "vitest --no-threads --no-isolate",
+    "build": "vite build && tsc --project tsconfig.build.json",
+    "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
+    "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
   },
   "devDependencies": {
     "@qq15725/eslint-config": "^1.1.0",
-    "@types/node": "^18.13.0",
+    "@types/node": "^18.14.0",
     "bumpp": "^8.2.1",
-    "eslint": "^8.33.0",
+    "conventional-changelog-cli": "^2.2.2",
+    "eslint": "^8.34.0",
     "typescript": "^4.9.5",
-    "vite": "^4.1.1",
-    "vitest": "^0.28.4"
+    "vite": "^4.1.2",
+    "vitest": "^0.28.5"
   }
 }
