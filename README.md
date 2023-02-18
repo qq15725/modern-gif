@@ -18,6 +18,13 @@
   </a>
 </p>
 
+## Features
+
+- ⚡️ GIF decode
+- 🤙🏻 GIF encode
+- ☁️ GIF encode frame supporte in the Web Worker
+- 🦾 TypeScript, of course
+
 ## 📦 Install
 
 ```sh
@@ -26,7 +33,7 @@ npm i modern-gif
 
 ## 🦄 Usage
 
-### GIF Encode
+### Encode
 
 ```ts
 import { createEncoder } from 'modern-gif'
@@ -58,7 +65,7 @@ encoder.flush().then(data => {
 })
 ```
 
-### GIF Decode
+### Decode
 
 ```ts
 import { decode, decodeFrames } from 'modern-gif'
