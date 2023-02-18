@@ -26,10 +26,42 @@ npm i modern-gif
 
 ## 🦄 Usage
 
-### Decode
+### GIF Encode
 
 ```ts
-import { decode, readFrames } from 'modern-gif'
+import { createEncoder } from 'modern-gif'
+// import the `workerUrl` through `Vite`
+import workerUrl from 'modern-gif/worker?url'
+
+const width = 100
+const height = 100
+
+const encoder = createEncoder({
+  workerUrl,
+  width,
+  height,
+})
+
+encoder.encode({
+  imageData: new Uint8ClampedArray(width * height * 4).map(() => 111),
+  delay: 100,
+})
+
+encoder.encode({
+  imageData: new Uint8ClampedArray(width * height * 4).map(() => 222),
+  delay: 100,
+})
+
+encoder.flush().then(data => {
+  const blob = new Blob([data], { type: 'image/gif' })
+  window.open(URL.createObjectURL(blob))
+})
+```
+
+### GIF Decode
+
+```ts
+import { decode, decodeFrames } from 'modern-gif'
 
 window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/assets/test.gif')
   .then(res => res.arrayBuffer())
@@ -37,7 +69,7 @@ window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/a
   .then(data => {
     const gif = decode(data)
 
-    readFrames(data, gif).forEach(frame => {
+    decodeFrames(data, gif).forEach(frame => {
       const canvas = document.createElement('canvas')
       const context2d = canvas.getContext('2d')
       canvas.width = frame.width
@@ -48,34 +80,6 @@ window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/a
 
     console.log(gif)
   })
-```
-
-### Encode
-
-```ts
-import { encode } from 'modern-gif'
-
-const gifData = encode({
-  width: 40,
-  height: 40,
-  frames: [
-    {
-      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 222),
-      delay: 100,
-    },
-    {
-      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 233),
-      delay: 100,
-    },
-    {
-      imageData: new Uint8ClampedArray(40 * 40 * 4).map(() => 244),
-      delay: 100,
-    },
-  ],
-})
-
-const blob = new Blob([gifData], { type: 'image/gif' })
-window.open(URL.createObjectURL(blob))
 ```
 
 ## Types

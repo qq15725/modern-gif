@@ -1,7 +1,7 @@
 import { createColorTableByMmcq } from './create-color-table-by-mmcq'
 import { createColorTableByNeuquant } from './create-color-table-by-neuquant'
 import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from './utils'
-import { writeDataByLzw } from './write-data-by-lzw'
+import { lzwEncode } from './lzw-encode'
 import { createWriter } from './create-writer'
 import type { Frame } from './gif'
 
@@ -9,10 +9,10 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
   const writer = createWriter()
 
   const {
-    writeUint8,
-    writeUint8Bytes,
-    writeUint16LE,
-    exportUint8Array,
+    writeByte,
+    writeBytes,
+    writeUnsigned,
+    flush,
   } = writer
 
   const {
@@ -98,9 +98,9 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
   }
 
   // Graphic control extension
-  writeUint8(EXTENSION) // extension introducer
-  writeUint8(EXTENSION_GRAPHIC_CONTROL) // GCE label
-  writeUint8(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
+  writeByte(EXTENSION) // extension introducer
+  writeByte(EXTENSION_GRAPHIC_CONTROL) // GCE label
+  writeByte(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
   if (transparent) {
     if (!transparentIndex || transparentIndex < 0 || transparentIndex >= colorTableLength) {
       throw new Error('Transparent color index.')
@@ -116,17 +116,17 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
   // 4-6 : disposal
   // 7   : user input flag = 0
   // 8   : transparency flag
-  writeUint8(parseInt(`000${ Number(disposal & 7).toString(2).padStart(3, '0') }0${ transparent ? 1 : 0 }`, 2))
-  writeUint16LE(delay / 10) // delay x 1/100 sec
-  writeUint8(transparentIndex) // transparent color index
-  writeUint8(0) // block terminator
+  writeByte(parseInt(`000${ Number(disposal & 7).toString(2).padStart(3, '0') }0${ transparent ? 1 : 0 }`, 2))
+  writeUnsigned(delay / 10) // delay x 1/100 sec
+  writeByte(transparentIndex) // transparent color index
+  writeByte(0) // block terminator
 
   // Image descriptor
-  writeUint8(IMAGE_DESCRIPTOR) // image separator
-  writeUint16LE(left) // image position x,y = 0,0
-  writeUint16LE(top)
-  writeUint16LE(width) // image size
-  writeUint16LE(height)
+  writeByte(IMAGE_DESCRIPTOR) // image separator
+  writeUnsigned(left) // image position x,y = 0,0
+  writeUnsigned(top)
+  writeUnsigned(width) // image size
+  writeUnsigned(height)
   // <Packed Fields>
   if (colorTable?.length) {
     // 1   : local color table = 1
@@ -134,16 +134,16 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
     // 3   : sorted = 0
     // 4-5 : reserved = 0
     // 6-8 : local color table size
-    writeUint8(parseInt(`10000${ (minCodeSize - 1).toString(2).padStart(3, '0') }`, 2))
+    writeByte(parseInt(`10000${ (minCodeSize - 1).toString(2).padStart(3, '0') }`, 2))
 
     // Local Color Table
-    writeUint8Bytes(colorTable.flat())
+    writeBytes(colorTable.flat())
   } else {
-    writeUint8(0)
+    writeByte(0)
   }
 
   // LZW
-  writeDataByLzw(minCodeSize, indexes, writer)
+  lzwEncode(minCodeSize, indexes, writer)
 
-  return exportUint8Array()
+  return flush()
 }

@@ -1,11 +1,11 @@
 import type { Writer } from './create-writer'
 
-export function writeDataByLzw(minCodeSize: number, data: Uint8Array, writer: Writer) {
-  const { writeUint8, getCursor, calculateDistance } = writer
+export function lzwEncode(minCodeSize: number, data: Uint8Array, writer: Writer) {
+  const { writeByte, getCursor, calculateDistance } = writer
 
-  writeUint8(minCodeSize)
+  writeByte(minCodeSize)
   let cur_subblock = getCursor()
-  writeUint8(0)
+  writeByte(0)
   const clear_code = 1 << minCodeSize
   const code_mask = clear_code - 1
   const eoi_code = clear_code + 1
@@ -15,13 +15,13 @@ export function writeDataByLzw(minCodeSize: number, data: Uint8Array, writer: Wr
   let cur = 0
   function emit_bytes_to_buffer(bit_block_size: number) {
     while (cur_shift >= bit_block_size) {
-      writeUint8(cur & 0xFF)
+      writeByte(cur & 0xFF)
       cur >>= 8
       cur_shift -= 8
       if (calculateDistance(cur_subblock) === 256) {
-        writeUint8(255, cur_subblock)
+        writeByte(255, cur_subblock)
         cur_subblock = getCursor()
-        writeUint8(0)
+        writeByte(0)
       }
     }
   }
@@ -41,13 +41,13 @@ export function writeDataByLzw(minCodeSize: number, data: Uint8Array, writer: Wr
       cur |= ib_code << cur_shift
       cur_shift += cur_code_size
       while (cur_shift >= 8) {
-        writeUint8(cur & 0xFF)
+        writeByte(cur & 0xFF)
         cur >>= 8
         cur_shift -= 8
         if (calculateDistance(cur_subblock) === 256) {
-          writeUint8(255, cur_subblock)
+          writeByte(255, cur_subblock)
           cur_subblock = getCursor()
-          writeUint8(0)
+          writeByte(0)
         }
       }
       if (next_code === 4096) {
@@ -69,9 +69,9 @@ export function writeDataByLzw(minCodeSize: number, data: Uint8Array, writer: Wr
   emit_code(eoi_code) // End Of Information.
   emit_bytes_to_buffer(1)
   if (calculateDistance(cur_subblock) === 1) {
-    writeUint8(0, cur_subblock)
+    writeByte(0, cur_subblock)
   } else {
-    writeUint8(calculateDistance(cur_subblock) - 1, cur_subblock)
-    writeUint8(0)
+    writeByte(calculateDistance(cur_subblock) - 1, cur_subblock)
+    writeByte(0)
   }
 }

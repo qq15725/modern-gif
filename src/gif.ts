@@ -61,7 +61,7 @@ export interface Frame {
 
   // Image Data
   imageDataPositions: ImageDataPosition[]
-  // This is only used for `encode`
+  // Only used for `encode`
   imageData?: Uint8ClampedArray
 
   // Extensions (89a)
@@ -74,6 +74,7 @@ export interface Frame {
   index: number
   delay: number // unit: 1ms
   disposal: GraphicControl['disposal']
+  // Only used for `encode`
   colorTableGeneration?: 'MMCQ' | 'NeuQuant'
 }
 
@@ -107,5 +108,7 @@ export interface GIF89a extends GIF87a {
 export interface GIF extends GIF89a {
   version: '89a' | '87a'
 
+  // Only used for `encode`
   colorTableGeneration?: 'MMCQ' | 'NeuQuant'
+  workerUrl?: string
 }

@@ -1,4 +1,4 @@
-export function readDataByLzw(minCodeSize: number, data: Uint8Array, pixelCount: number) {
+export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: number) {
   const MAX_STACK_SIZE = 4096
   const nullCode = -1
   const npix = pixelCount

@@ -13,56 +13,49 @@ import {
   VERSIONS,
   consoleWarn,
 } from './utils'
-import type { Application, Frame, GIF, GraphicControl, PlainText, RGB } from './gif'
+import { createReader } from './create-reader'
+import type { Application, Frame, GIF, GraphicControl, PlainText } from './gif'
 
 export function decode(data: Uint8Array): GIF {
   const gif = {} as GIF
 
-  let cursor = 0
-
-  // utils
-  const readUint8 = (): number => data[cursor++]
-  const readUint8Bytes = (length: number): Uint8Array => data.subarray(cursor, cursor += length)
-  const readUTFBytes = (length: number): string => Array.from(readUint8Bytes(length)).map(val => String.fromCharCode(val)).join('')
-  const readUint16LE = (): number => new DataView(data.buffer.slice(cursor, cursor += 2)).getUint16(0, true)
-  const readBits8 = (): number[] => readUint8().toString(2).padStart(8, '0').split('').map(v => Number(v))
-  const readColors = (length: number): RGB[] => Array.from({ length }, () => Array.from(readUint8Bytes(3)) as RGB)
-  const readBlock = (): number[] => {
-    const block: number[] = []
-    while (true) {
-      const val = readUint8()
-      if (val === 0 && data[cursor] !== 0) break
-      block.push(val)
-    }
-    return block
-  }
+  const {
+    getCursor,
+    setCursor,
+    readByte,
+    readString,
+    readUnsigned,
+    readBits,
+    readColorTable,
+    readSubBlock,
+  } = createReader(data)
   const createFrame = () => ({ index: 0, delay: 100, disposal: 0 }) as Frame
 
   // Header
-  const signature = readUTFBytes(3)
-  const version = readUTFBytes(3)
+  const signature = readString(3)
+  const version = readString(3)
   if (signature !== SIGNATURE || !VERSIONS.includes(version)) {
     throw new Error('This is not a 87a/89a GIF data.')
   }
   gif.version = version as any
 
   // Logical Screen Descriptor
-  gif.width = readUint16LE()
-  gif.height = readUint16LE()
+  gif.width = readUnsigned()
+  gif.height = readUnsigned()
   // ↓ <Packed Fields>
-  const bits = readBits8()
+  const bits = readBits()
   gif.globalColorTable = Boolean(bits[0])
   gif.colorResoluTion = (parseInt(`${ bits[1] }${ bits[2] }${ bits[3] }`, 2) + 1) as any
   gif.colorTableSorted = Boolean(bits[4])
   const colorTableSize = parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2)
   gif.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
   // ↑ <Packed Fields>
-  gif.backgroundColorIndex = readUint8()
-  gif.pixelAspectRatio = readUint8()
+  gif.backgroundColorIndex = readByte()
+  gif.pixelAspectRatio = readByte()
 
   // Global Color Table
   if (gif.globalColorTable) {
-    gif.colorTable = readColors(gif.colorTableSize)
+    gif.colorTable = readColorTable(gif.colorTableSize)
   }
 
   gif.frames = [] as Frame[]
@@ -70,15 +63,15 @@ export function decode(data: Uint8Array): GIF {
   let frame = createFrame()
 
   while (true) {
-    const flag = readUint8()
+    const flag = readByte()
 
     if (flag === IMAGE_DESCRIPTOR) {
-      frame.left = readUint16LE()
-      frame.top = readUint16LE()
-      frame.width = readUint16LE()
-      frame.height = readUint16LE()
+      frame.left = readUnsigned()
+      frame.top = readUnsigned()
+      frame.width = readUnsigned()
+      frame.height = readUnsigned()
       // ↓ <Packed Fields>
-      const bits = readBits8()
+      const bits = readBits()
       frame.localColorTable = Boolean(bits[0])
       frame.interlaced = Boolean(bits[1])
       frame.colorTableSorted = Boolean(bits[2])
@@ -89,19 +82,20 @@ export function decode(data: Uint8Array): GIF {
 
       // Local Color Table
       if (frame.localColorTable) {
-        frame.colorTable = readColors(frame.colorTableSize)
+        frame.colorTable = readColorTable(frame.colorTableSize)
       }
 
       // LZW Minimum Code Size
-      frame.lzwMinCodeSize = readUint8()
+      frame.lzwMinCodeSize = readByte()
 
       // Image Data
       frame.imageDataPositions = []
       while (true) {
-        const length = readUint8()
+        const length = readByte()
         if (length === 0) break
+        const cursor = getCursor()
         frame.imageDataPositions.push([cursor, length])
-        cursor += length
+        setCursor(cursor + length)
       }
 
       gif.frames.push(frame)
@@ -111,42 +105,42 @@ export function decode(data: Uint8Array): GIF {
     }
 
     if (flag === EXTENSION) {
-      const extensionFlag = readUint8()
+      const extensionFlag = readByte()
 
       if (extensionFlag === EXTENSION_APPLICATION) {
-        if (readUint8() !== EXTENSION_APPLICATION_BLOCK_SIZE) continue
+        if (readByte() !== EXTENSION_APPLICATION_BLOCK_SIZE) continue
         const application = {} as Application
-        application.identifier = readUTFBytes(8)
-        application.code = readUTFBytes(3)
+        application.identifier = readString(8)
+        application.code = readString(3)
         if (`${ application.identifier }${ application.code }` === 'NETSCAPE2.0') {
-          if (readUint8() === 3) {
-            gif.looped = Boolean(readUint8())
-            gif.loopCount = readUint16LE()
+          if (readByte() === 3) {
+            gif.looped = Boolean(readByte())
+            gif.loopCount = readUnsigned()
           }
         }
-        application.data = readBlock()
+        application.data = readSubBlock()
         frame.application = application
         continue
       }
 
       if (extensionFlag === EXTENSION_COMMENT) {
-        frame.comment = readBlock().map(val => String.fromCharCode(val)).join('')
+        frame.comment = readSubBlock().map(val => String.fromCharCode(val)).join('')
         continue
       }
 
       if (extensionFlag === EXTENSION_GRAPHIC_CONTROL) {
-        if (readUint8() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
+        if (readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
         const graphicControl = {} as GraphicControl
         // ↓ <Packed Fields>
-        const bits = readBits8()
+        const bits = readBits()
         graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2) as any
         frame.disposal = graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
         graphicControl.userInput = Boolean(bits[6])
         graphicControl.transparent = Boolean(bits[7])
         // ↑ <Packed Fields>
-        graphicControl.delayTime = readUint16LE()
-        graphicControl.transparentIndex = readUint8()
-        readBlock()
+        graphicControl.delayTime = readUnsigned()
+        graphicControl.transparentIndex = readByte()
+        readSubBlock()
 
         frame.graphicControl = graphicControl
         frame.delay = (graphicControl.delayTime || 10) * 10
@@ -154,17 +148,17 @@ export function decode(data: Uint8Array): GIF {
       }
 
       if (extensionFlag === EXTENSION_PLAIN_TEXT) {
-        if (readUint8() !== EXTENSION_PLAIN_TEXT_BLOCK_SIZE) continue
+        if (readByte() !== EXTENSION_PLAIN_TEXT_BLOCK_SIZE) continue
         const plainText = {} as PlainText
-        plainText.left = readUint16LE()
-        plainText.top = readUint16LE()
-        plainText.width = readUint16LE()
-        plainText.height = readUint16LE()
-        plainText.cellWidth = readUint8()
-        plainText.cellHeight = readUint8()
-        plainText.colorIndex = readUint8()
-        plainText.backgroundColorIndex = readUint8()
-        plainText.data = readBlock()
+        plainText.left = readUnsigned()
+        plainText.top = readUnsigned()
+        plainText.width = readUnsigned()
+        plainText.height = readUnsigned()
+        plainText.cellWidth = readByte()
+        plainText.cellHeight = readByte()
+        plainText.colorIndex = readByte()
+        plainText.backgroundColorIndex = readByte()
+        plainText.data = readSubBlock()
         frame.plainText = plainText
         continue
       }

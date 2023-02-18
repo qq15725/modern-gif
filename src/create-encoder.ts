@@ -6,11 +6,12 @@ import {
   TRAILER,
 } from './utils'
 import { createWriter } from './create-writer'
-import type { GIF } from './gif'
+import { encodeFrame } from './encode-frame'
+import type { Frame, GIF } from './gif'
 
 export interface Encoder {
-  write: (frameData: Uint8Array) => void
-  flush: () => Uint8Array
+  encode: (frame: Partial<Frame>) => void
+  flush: () => Promise<Uint8Array>
 }
 
 export function createEncoder(options: Partial<GIF>): Encoder {
@@ -50,53 +51,98 @@ export function createEncoder(options: Partial<GIF>): Encoder {
   const writer = createWriter()
 
   const {
-    writeUTFBytes,
-    writeUint8,
-    writeUint8Bytes,
-    writeUint16LE,
-    exportUint8Array,
+    writeByte,
+    writeBytes,
+    writeUnsigned,
+    writeString,
+    flush,
   } = writer
 
-  // Header
-  writeUTFBytes(SIGNATURE)
-  writeUTFBytes(gif.version)
+  function writeBaseInfo() {
+    // Header
+    writeString(SIGNATURE)
+    writeString(gif.version)
 
-  // Logical Screen Descriptor
-  writeUint16LE(gif.width)
-  writeUint16LE(gif.height)
-  // <Packed Fields>
-  // 1   : global color table flag = 1
-  // 2-4 : color resolution = 7
-  // 5   : global color table sort flag = 0
-  // 6-8 : global color table size
-  writeUint8(parseInt(`${ colorTableSize ? 1 : 0 }1110${ colorTableSize.toString(2).padStart(3, '0') }`, 2))
-  writeUint8(gif.backgroundColorIndex) // background color index
-  writeUint8(gif.pixelAspectRatio) // pixel aspect ratio - assume 1:1
+    // Logical Screen Descriptor
+    writeUnsigned(gif.width)
+    writeUnsigned(gif.height)
+    // <Packed Fields>
+    // 1   : global color table flag = 1
+    // 2-4 : color resolution = 7
+    // 5   : global color table sort flag = 0
+    // 6-8 : global color table size
+    writeByte(parseInt(`${ colorTableSize ? 1 : 0 }1110${ colorTableSize.toString(2).padStart(3, '0') }`, 2))
+    writeByte(gif.backgroundColorIndex) // background color index
+    writeByte(gif.pixelAspectRatio) // pixel aspect ratio - assume 1:1
 
-  // Global Color Table
-  writeUint8Bytes(gif.colorTable?.flat() ?? [])
+    // Global Color Table
+    writeBytes(gif.colorTable?.flat() ?? [])
 
-  // Netscape block
-  if (gif.looped) {
-    writeUint8(EXTENSION) // extension introducer
-    writeUint8(EXTENSION_APPLICATION) // app extension label
-    writeUint8(EXTENSION_APPLICATION_BLOCK_SIZE) // block size
-    writeUTFBytes('NETSCAPE2.0') // app id + auth code
-    writeUint8(3) // sub-block size
-    writeUint8(1) // loop sub-block id
-    writeUint16LE(gif.loopCount ?? 0) // loop count (extra iterations, 0=repeat forever)
-    writeUint8(0) // block terminator
+    // Netscape block
+    if (gif.looped) {
+      writeByte(EXTENSION) // extension introducer
+      writeByte(EXTENSION_APPLICATION) // app extension label
+      writeByte(EXTENSION_APPLICATION_BLOCK_SIZE) // block size
+      writeString('NETSCAPE2.0') // app id + auth code
+      writeByte(3) // sub-block size
+      writeByte(1) // loop sub-block id
+      writeUnsigned(gif.loopCount ?? 0) // loop count (extra iterations, 0=repeat forever)
+      writeByte(0) // block terminator
+    }
+  }
+
+  let frameIndex = 0
+  let flushResolve: any | undefined
+  const encodeing = new Map<number, boolean>()
+
+  function onEncoded(index: number) {
+    encodeing.delete(index)
+    if (!encodeing.size) {
+      flushResolve?.()
+    }
+  }
+
+  function reset() {
+    frameIndex = 0
+    encodeing.clear()
+    writeBaseInfo()
+  }
+
+  writeBaseInfo()
+
+  const worker = gif.workerUrl ? new Worker(gif.workerUrl) : undefined
+  if (worker) {
+    worker.onmessage = event => {
+      const { index, data } = event.data
+      writeBytes(data)
+      onEncoded(index)
+    }
+    worker.onmessageerror = event => onEncoded(event.data.index)
   }
 
   return {
-    write: (frameData: Uint8Array) => {
-      writeUint8Bytes(frameData)
+    encode: (frame: Partial<Frame>) => {
+      const index = frameIndex++
+      if (worker && frame.imageData?.buffer) {
+        encodeing.set(index, true)
+        worker.postMessage({ index, frame }, [frame.imageData.buffer])
+      } else {
+        writeBytes(encodeFrame(frame))
+        onEncoded(index)
+      }
     },
     flush: () => {
-      // Trailer
-      writeUint8(TRAILER)
-
-      return exportUint8Array()
+      return new Promise(resolve => {
+        const timer = setTimeout(() => flushResolve?.(), 30000)
+        flushResolve = () => {
+          timer && clearTimeout(timer)
+          // Trailer
+          writeByte(TRAILER)
+          const data = flush()
+          reset()
+          resolve(data)
+        }
+      })
     },
   }
 }

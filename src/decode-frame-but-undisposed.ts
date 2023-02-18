@@ -1,8 +1,8 @@
 import { deinterlace } from './deinterlace'
-import { readDataByLzw } from './read-data-by-lzw'
+import { lzwDecode } from './lzw-decode'
 import type { GIF } from './gif'
 
-export function readRawFrame(gifData: Uint8Array, gif: GIF, index: number): ImageData {
+export function decodeFrameButUndisposed(gifData: Uint8Array, gif: GIF, index: number): ImageData {
   const {
     width: gifWidth,
     height: gifHeight,
@@ -45,7 +45,7 @@ export function readRawFrame(gifData: Uint8Array, gif: GIF, index: number): Imag
   })
 
   // decompress image data
-  let colorIndexes = readDataByLzw(lzwMinCodeSize, compressed, width * height)
+  let colorIndexes = lzwDecode(lzwMinCodeSize, compressed, width * height)
 
   // deinterlace
   if (interlaced) {

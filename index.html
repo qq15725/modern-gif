@@ -23,7 +23,7 @@
 
 <body>
   <script type="module" async>
-    import { createEncoder, decode, encodeFrame, readFrames } from './src'
+    import { createEncoder, decode, decodeFrames } from './src'
 
     const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
@@ -38,23 +38,15 @@
     // eslint-disable-next-line no-console
     console.log(gif)
 
-    // eslint-disable-next-line no-console
-    console.time('read frames')
-    const frames = readFrames(data, gif)
-    // eslint-disable-next-line no-console
-    console.timeEnd('read frames')
+    document.querySelector('button').onclick = async () => {
+      // eslint-disable-next-line no-console
+      console.time('decode frames')
+      const frames = decodeFrames(data, gif)
+      // eslint-disable-next-line no-console
+      console.timeEnd('decode frames')
 
-    // frames.forEach(frame => {
-    //   const canvas = document.createElement('canvas')
-    //   const context2d = canvas.getContext('2d')
-    //   canvas.width = frame.width
-    //   canvas.height = frame.height
-    //   context2d.putImageData(frame, 0, 0)
-    //   document.body.append(canvas)
-    // })
-
-    document.querySelector('button').onclick = () => {
       const encoder = createEncoder({
+        workerUrl: '/dist/worker.js',
         width: gif.width,
         height: gif.height,
         colorTableGeneration: 'NeuQuant',
@@ -62,15 +54,13 @@
       // eslint-disable-next-line no-console
       console.time('encode')
       frames.forEach(frame => {
-        encoder.write(
-          encodeFrame({
-            width: gif.width,
-            height: gif.height,
-            imageData: frame.data,
-          }),
-        )
+        encoder.encode({
+          width: gif.width,
+          height: gif.height,
+          imageData: frame.data,
+        })
       })
-      const gifData = encoder.flush()
+      const gifData = await encoder.flush()
       // eslint-disable-next-line no-console
       console.timeEnd('encode')
 

@@ -6,12 +6,12 @@ export interface Writer {
   setCursor(cursor: WriterCursor): void
   calculateDistance(cursor: WriterCursor): number
 
-  writeUint8(value: number, cursor?: WriterCursor): void
-  writeUint8Bytes(value: Uint8Array | number[]): void
-  writeUTFBytes(value: string): void
-  writeUint16LE(value: number): void
+  writeByte(value: number, cursor?: WriterCursor): void
+  writeBytes(value: Uint8Array | number[]): void
+  writeUnsigned(value: number): void
+  writeString(value: string): void
 
-  exportUint8Array(): Uint8Array
+  flush(): Uint8Array
 }
 
 export function createWriter(options: { chunkSize?: number } = {}): Writer {
@@ -29,7 +29,7 @@ export function createWriter(options: { chunkSize?: number } = {}): Writer {
     chunkCursor = cursor[1]
   }
   const calculateDistance = (cursor: WriterCursor) => (chunkIndex * chunkSize + chunkCursor) - (cursor[0] * chunkSize + cursor[1])
-  const writeUint8 = (val: number, cursor?: WriterCursor) => {
+  const writeByte = (val: number, cursor?: WriterCursor) => {
     if (cursor) {
       chunks[cursor[0]][cursor[1]] = val
     } else {
@@ -40,11 +40,11 @@ export function createWriter(options: { chunkSize?: number } = {}): Writer {
       chunks[chunkIndex][chunkCursor++] = val
     }
   }
-  const writeUint8Bytes = (value: number[] | Uint8Array) => value.forEach(val => writeUint8(val))
-  const writeUTFBytes = (value: string) => value.split('').forEach((_, i) => writeUint8(value.charCodeAt(i)))
-  const writeUint16LE = (value: number) => writeUint8Bytes([value & 0xFF, (value >> 8) & 0xFF])
+  const writeBytes = (value: number[] | Uint8Array) => value.forEach(val => writeByte(val))
+  const writeString = (value: string) => value.split('').forEach((_, i) => writeByte(value.charCodeAt(i)))
+  const writeUnsigned = (value: number) => writeBytes([value & 0xFF, (value >> 8) & 0xFF])
 
-  const exportUint8Array = () => {
+  const flush = () => {
     chunks[chunkIndex] = chunks[chunkIndex].slice(0, chunkCursor)
 
     const data = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
@@ -67,11 +67,11 @@ export function createWriter(options: { chunkSize?: number } = {}): Writer {
     setCursor,
     calculateDistance,
 
-    writeUint8,
-    writeUint8Bytes,
-    writeUTFBytes,
-    writeUint16LE,
+    writeByte,
+    writeBytes,
+    writeString,
+    writeUnsigned,
 
-    exportUint8Array,
+    flush,
   }
 }

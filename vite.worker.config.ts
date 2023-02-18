@@ -7,10 +7,10 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     lib: {
-      name: 'encode-frame.worker',
+      name: 'worker',
       formats: ['iife'],
-      fileName: () => 'encode-frame.worker.js',
-      entry: resolvePath('./src/workers/encode-frame.worker.ts'),
+      fileName: () => 'worker.js',
+      entry: resolvePath('./src/worker.ts'),
     },
   },
 })

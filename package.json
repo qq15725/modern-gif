@@ -26,6 +26,11 @@
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
+    "./worker": {
+      "types": "./types/worker.d.ts",
+      "require": "./dist/worker.js",
+      "import": "./dist/worker.js"
+    },
     "./*": "./*"
   },
   "main": "dist/index.mjs",

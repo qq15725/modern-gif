@@ -1,7 +1,7 @@
-import { readRawFrame } from './read-raw-frame'
+import { decodeFrameButUndisposed } from './decode-frame-but-undisposed'
 import type { Frame, GIF } from './gif'
 
-export function readFrames(gifData: Uint8Array, gif: GIF, range?: number[]): ImageData[] {
+export function decodeFrames(gifData: Uint8Array, gif: GIF, range?: number[]): ImageData[] {
   const { frames, width: gifWidth, height: gifHeight } = gif
   const rangeFrames = range ? frames.slice(range[0], range[1] + 1) : frames
   const pixels = new Uint8ClampedArray(gifWidth * gifHeight * 4)
@@ -16,7 +16,7 @@ export function readFrames(gifData: Uint8Array, gif: GIF, range?: number[]): Ima
 
   return rangeFrames.map(frame => {
     const { index, disposal } = frame
-    const image = readRawFrame(gifData, gif, index)
+    const image = decodeFrameButUndisposed(gifData, gif, index)
 
     if (previousFrame && previousFrame?.disposal !== 1) {
       const { left, top, width, height } = previousFrame
