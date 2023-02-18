@@ -1,3 +1,12 @@
+# [0.1.0](https://github.com/qq15725/modern-gif/compare/v0.0.8...v0.1.0) (2023-02-18)
+
+
+### Features
+
+* encoder supports web workers ([2ba8153](https://github.com/qq15725/modern-gif/commit/2ba81538812bba19e31a580904d9a9e4841cf30f))
+
+
+
 ## [0.0.8](https://github.com/qq15725/modern-gif/compare/v0.0.7...v0.0.8) (2023-02-18)
 
 
