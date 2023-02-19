@@ -1,3 +1,12 @@
+## [0.1.1](https://github.com/qq15725/modern-gif/compare/v0.1.0...v0.1.1) (2023-02-19)
+
+
+### Features
+
+* add `workerNumber` options ([68facd7](https://github.com/qq15725/modern-gif/commit/68facd7764ed8c39b5412fc178a54d1b39fd956b))
+
+
+
 # [0.1.0](https://github.com/qq15725/modern-gif/compare/v0.0.8...v0.1.0) (2023-02-18)
 
 
