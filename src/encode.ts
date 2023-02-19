@@ -1,15 +1,17 @@
 import { createEncoder } from './create-encoder'
-import type { Frame, GIF } from './gif'
+import type { EncodeOptions } from './options'
 
-export function encode(gif: Partial<GIF>): Promise<Uint8Array> {
-  const encoder = createEncoder(gif)
+export function encode(options: EncodeOptions): Promise<Uint8Array> {
+  const encoder = createEncoder(options)
 
-  gif.frames?.forEach(frame => {
+  const { width, height, algorithm, frames } = options
+
+  frames.forEach(frameOptions => {
     encoder.encode({
-      width: gif?.width,
-      height: gif?.height,
-      colorTableGeneration: gif?.colorTableGeneration,
-      ...(frame as Partial<Frame>),
+      width,
+      height,
+      algorithm,
+      ...frameOptions,
     })
   })
 

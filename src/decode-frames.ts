@@ -1,7 +1,7 @@
 import { decodeFrameButUndisposed } from './decode-frame-but-undisposed'
-import type { Frame, GIF } from './gif'
+import type { Frame, Gif } from './gif'
 
-export function decodeFrames(gifData: Uint8Array, gif: GIF, range?: number[]): ImageData[] {
+export function decodeFrames(gifData: Uint8Array, gif: Gif, range?: number[]): ImageData[] {
   const { frames, width: gifWidth, height: gifHeight } = gif
   const rangeFrames = range ? frames.slice(range[0], range[1] + 1) : frames
   const pixels = new Uint8ClampedArray(gifWidth * gifHeight * 4)

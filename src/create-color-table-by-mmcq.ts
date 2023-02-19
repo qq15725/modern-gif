@@ -7,11 +7,9 @@ const sigbits = 5
 const rshift = 8 - sigbits
 const maxIterations = 1000
 const fractByPopulations = 0.75
-const naturalOrder = (a: number, b: number) => (a < b) ? -1 : ((a > b) ? 1 : 0)
 
-function getColorIndex(r: number, g: number, b: number) {
-  return (r << (2 * sigbits)) + (g << sigbits) + b
-}
+const naturalOrder = (a: number, b: number) => (a < b) ? -1 : ((a > b) ? 1 : 0)
+const getColorIndex = (r: number, g: number, b: number) => (r << (2 * sigbits)) + (g << sigbits) + b
 
 function createVBox(r1: number, r2: number, g1: number, g2: number, b1: number, b2: number, histogram: number[]) {
   let volume = 0

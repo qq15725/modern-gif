@@ -61,8 +61,6 @@ export interface Frame {
 
   // Image Data
   imageDataPositions: ImageDataPosition[]
-  // Only used for `encode`
-  imageData?: Uint8ClampedArray
 
   // Extensions (89a)
   application?: Application
@@ -74,11 +72,9 @@ export interface Frame {
   index: number
   delay: number // unit: 1ms
   disposal: GraphicControl['disposal']
-  // Only used for `encode`
-  colorTableGeneration?: 'MMCQ' | 'NeuQuant'
 }
 
-export interface GIF87a {
+export interface Gif87a {
   // Logical Screen Descriptor
   width: number
   height: number
@@ -98,17 +94,13 @@ export interface GIF87a {
   frames: Frame[]
 }
 
-export interface GIF89a extends GIF87a {
+export interface Gif89a extends Gif87a {
   // Application Extension
   // NETSCAPE2.0
   looped?: boolean
   loopCount?: number
 }
 
-export interface GIF extends GIF89a {
+export interface Gif extends Gif89a {
   version: '89a' | '87a'
-
-  // Only used for `encode`
-  colorTableGeneration?: 'MMCQ' | 'NeuQuant'
-  workerUrl?: string
 }

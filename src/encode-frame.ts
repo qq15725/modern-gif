@@ -3,9 +3,9 @@ import { createColorTableByNeuquant } from './create-color-table-by-neuquant'
 import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from './utils'
 import { lzwEncode } from './lzw-encode'
 import { createWriter } from './create-writer'
-import type { Frame } from './gif'
+import type { EncodeFrameOptions } from './options'
 
-export function encodeFrame(frame: Partial<Frame>): Uint8Array {
+export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
   const writer = createWriter()
 
   const {
@@ -21,17 +21,17 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
     width = 0,
     height = 0,
     delay = 100,
-    colorTableGeneration = 'NeuQuant',
-    imageData = new Uint8ClampedArray(0),
-  } = frame
+    algorithm = 'NeuQuant',
+    imageData,
+  } = options
 
   let {
     disposal = 0,
     colorTable,
-  } = frame
+  } = options
 
-  let transparent = frame.graphicControl?.transparent
-  let transparentIndex = frame.graphicControl?.transparentIndex ?? 255
+  let transparent = options.graphicControl?.transparent
+  let transparentIndex = options.graphicControl?.transparentIndex ?? 255
 
   if (left < 0 || left > 65535) throw new Error('Left invalid.')
   if (top < 0 || top > 65535) throw new Error('Top invalid.')
@@ -41,7 +41,7 @@ export function encodeFrame(frame: Partial<Frame>): Uint8Array {
   // color table
   let findClosestRGB: any | undefined
   if (!colorTable) {
-    const res = colorTableGeneration === 'MMCQ'
+    const res = algorithm === 'MMCQ'
       ? createColorTableByMmcq(imageData, 255)
       : createColorTableByNeuquant(imageData, 255)
     colorTable = res.colorTable

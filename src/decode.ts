@@ -14,10 +14,10 @@ import {
   consoleWarn,
 } from './utils'
 import { createReader } from './create-reader'
-import type { Application, Frame, GIF, GraphicControl, PlainText } from './gif'
+import type { Application, Frame, Gif, GraphicControl, PlainText } from './gif'
 
-export function decode(data: Uint8Array): GIF {
-  const gif = {} as GIF
+export function decode(data: Uint8Array): Gif {
+  const gif = {} as Gif
 
   const {
     getCursor,

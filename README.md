@@ -93,6 +93,10 @@ window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/a
 
 See the [gif.ts](src/gif.ts)
 
+## Encode Options
+
+See the [options.ts](src/options.ts)
+
 ## Specifications
 
 [GIF89a Spec](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)

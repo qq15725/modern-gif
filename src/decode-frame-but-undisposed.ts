@@ -1,8 +1,8 @@
 import { deinterlace } from './deinterlace'
 import { lzwDecode } from './lzw-decode'
-import type { GIF } from './gif'
+import type { Gif } from './gif'
 
-export function decodeFrameButUndisposed(gifData: Uint8Array, gif: GIF, index: number): ImageData {
+export function decodeFrameButUndisposed(gifData: Uint8Array, gif: Gif, index: number): ImageData {
   const {
     width: gifWidth,
     height: gifHeight,
