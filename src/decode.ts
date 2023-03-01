@@ -14,9 +14,9 @@ import {
   consoleWarn,
 } from './utils'
 import { createReader } from './create-reader'
-import type { Application, Frame, Gif, GraphicControl, PlainText } from './gif'
+import type { Application, Frame, Gif, GifBuffer, GraphicControl, PlainText } from './gif'
 
-export function decode(data: Uint8Array): Gif {
+export function decode(data: GifBuffer): Gif {
   const gif = {} as Gif
 
   const {

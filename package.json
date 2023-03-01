@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@qq15725/eslint-config": "^1.1.0",
+    "@types/dom-webcodecs": "^0.1.5",
     "@types/node": "^18.14.0",
     "bumpp": "^8.2.1",
     "conventional-changelog-cli": "^2.2.2",

@@ -5,6 +5,7 @@ importers:
   .:
     specifiers:
       '@qq15725/eslint-config': ^1.1.0
+      '@types/dom-webcodecs': ^0.1.5
       '@types/node': ^18.14.0
       bumpp: ^8.2.1
       conventional-changelog-cli: ^2.2.2
@@ -14,6 +15,7 @@ importers:
       vitest: ^0.28.5
     devDependencies:
       '@qq15725/eslint-config': 1.1.0_7kw3g6rralp5ps6mg3uyzz6azm
+      '@types/dom-webcodecs': 0.1.5
       '@types/node': 18.14.0
       bumpp: 8.2.1
       conventional-changelog-cli: 2.2.2
@@ -441,6 +443,10 @@ packages:
 
   /@types/chai/4.3.4:
     resolution: {integrity: sha512-KnRanxnpfpjUTqTCXslZSEdLfXExwgNxYPdiO2WGUj8+HDjFi8R3k5RVKPeSCzLjCcshCAtVO2QBbVuAV4kTnw==}
+    dev: true
+
+  /@types/dom-webcodecs/0.1.5:
+    resolution: {integrity: sha512-dsAE+4ws75W5mmNmIZ7IKZwv4bcz5GgPuA87u+Mk1CeVWB6g7ZwBfizRwBZDeyO12RSxoU3NlRa8jgLYQeSZGg==}
     dev: true
 
   /@types/json-schema/7.0.11:

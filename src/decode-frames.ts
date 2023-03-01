@@ -1,9 +1,59 @@
+import { decode } from './decode'
 import { decodeFrameButUndisposed } from './decode-frame-but-undisposed'
-import type { Frame, Gif } from './gif'
+import { SUPPORT_IMAGE_DECODER } from './utils'
+import type { Frame, Gif, GifBuffer } from './gif'
 
-export function decodeFrames(gifData: Uint8Array, gif: Gif, range?: number[]): ImageData[] {
+export interface DecodedFrame {
+  width: number
+  height: number
+  delay: number
+  data: Uint8ClampedArray
+}
+
+export async function decodeFrames(
+  data: GifBuffer,
+  options: {
+    gif?: Gif
+    frameIndexes?: number[]
+  } = {},
+): Promise<DecodedFrame[]> {
+  const { frameIndexes } = options
+
+  if (SUPPORT_IMAGE_DECODER && await ImageDecoder.isTypeSupported('image/gif')) {
+    const decoder = new ImageDecoder({ data, type: 'image/gif' })
+    await decoder.completed
+    await decoder.tracks.ready
+    const track = decoder.tracks.selectedTrack
+    if (track) {
+      const allFrameIndexes = [...new Array(track.frameCount)].map((_, frameIndex) => frameIndex)
+      const frames = await Promise.all(
+        (frameIndexes ? allFrameIndexes.slice(frameIndexes[0], frameIndexes[1] + 1) : allFrameIndexes)
+          .map(
+            frameIndex => decoder.decode({ frameIndex }).then(res => {
+              const frame = res.image
+              const canvas = document.createElement('canvas')
+              canvas.width = frame.displayWidth
+              canvas.height = frame.displayHeight
+              const context2d = canvas.getContext('2d')!
+              context2d.drawImage(frame, 0, 0)
+              const imageData = context2d.getImageData(0, 0, canvas.width, canvas.height)
+              return {
+                width: frame.displayWidth,
+                height: frame.displayHeight,
+                delay: (frame.duration ?? 100_0000) / 1_000,
+                data: imageData.data,
+              }
+            }),
+          ),
+      )
+      decoder.close()
+      return frames
+    }
+  }
+
+  const { gif = decode(data) } = options
   const { frames, width: gifWidth, height: gifHeight } = gif
-  const rangeFrames = range ? frames.slice(range[0], range[1] + 1) : frames
+  const rangeFrames = frameIndexes ? frames.slice(frameIndexes[0], frameIndexes[1] + 1) : frames
   const pixels = new Uint8ClampedArray(gifWidth * gifHeight * 4)
   let previousFrame: Frame | undefined
 
@@ -14,9 +64,18 @@ export function decodeFrames(gifData: Uint8Array, gif: Gif, range?: number[]): I
     return { start, end }
   }
 
+  let uint8Array: Uint8Array
+  if (data instanceof ArrayBuffer) {
+    uint8Array = new Uint8Array(data)
+  } else if (data instanceof Uint8Array) {
+    uint8Array = data
+  } else {
+    uint8Array = new Uint8Array(data.buffer)
+  }
+
   return rangeFrames.map(frame => {
     const { index, disposal } = frame
-    const image = decodeFrameButUndisposed(gifData, gif, index)
+    const image = decodeFrameButUndisposed(uint8Array, gif, index)
 
     if (previousFrame && previousFrame?.disposal !== 1) {
       const { left, top, width, height } = previousFrame
@@ -46,6 +105,11 @@ export function decodeFrames(gifData: Uint8Array, gif: Gif, range?: number[]): I
       previousFrame = frame
     }
 
-    return new ImageData(pixels.slice(0), gifWidth, gifHeight)
+    return {
+      width: gifWidth,
+      height: gifHeight,
+      delay: frame.delay,
+      data: pixels.slice(0),
+    }
   })
 }

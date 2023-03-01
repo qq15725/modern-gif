@@ -1,5 +1,7 @@
 // Constants
 export const PREFIX = '[modern-gif]'
+export const IN_BROWSER = typeof window !== 'undefined'
+export const SUPPORT_IMAGE_DECODER = IN_BROWSER && 'ImageDecoder' in window
 
 // GIF
 export const SIGNATURE = 'GIF'

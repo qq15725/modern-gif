@@ -104,3 +104,5 @@ export interface Gif89a extends Gif87a {
 export interface Gif extends Gif89a {
   version: '89a' | '87a'
 }
+
+export type GifBuffer = ArrayBuffer | ArrayBufferView

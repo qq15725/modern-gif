@@ -1,6 +1,11 @@
 import { decodeFrames } from './decode-frames'
-import type { Gif } from './gif'
+import type { DecodedFrame } from './decode-frames'
+import type { Gif, GifBuffer } from './gif'
 
-export function decodeFrame(gifData: Uint8Array, gif: Gif, index: number): ImageData {
-  return decodeFrames(gifData, gif, [0, Math.max(index, 0)]).pop()!
+export async function decodeFrame(data: GifBuffer, index: number, gif?: Gif): Promise<DecodedFrame> {
+  const frames = await decodeFrames(data, {
+    gif,
+    frameIndexes: [0, Math.max(index, 0)],
+  })
+  return frames.pop()!
 }

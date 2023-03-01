@@ -27,7 +27,6 @@
 
     const data = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
-      .then(buffer => new Uint8Array(buffer))
 
     // eslint-disable-next-line no-console
     console.time('decode')
@@ -41,12 +40,11 @@
     document.querySelector('button').onclick = async () => {
       // eslint-disable-next-line no-console
       console.time('decode frames')
-      const frames = decodeFrames(data, gif)
+      const frames = await decodeFrames(new Uint8Array(data))
       // eslint-disable-next-line no-console
       console.timeEnd('decode frames')
 
       const encoder = createEncoder({
-        workerUrl: '/dist/worker.js',
         width: gif.width,
         height: gif.height,
       })
