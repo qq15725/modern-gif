@@ -1,77 +1,83 @@
-import type { Writer } from './create-writer'
+import type { createWriter } from './create-writer'
 
-export function lzwEncode(minCodeSize: number, data: Uint8Array, writer: Writer) {
+export function lzwEncode(minCodeSize: number, data: Uint8Array, writer: ReturnType<typeof createWriter>) {
   const { writeByte, getCursor, calculateDistance } = writer
 
   writeByte(minCodeSize)
-  let cur_subblock = getCursor()
+  let curSubblock = getCursor()
   writeByte(0)
-  const clear_code = 1 << minCodeSize
-  const code_mask = clear_code - 1
-  const eoi_code = clear_code + 1
-  let next_code = eoi_code + 1
-  let cur_code_size = minCodeSize + 1
-  let cur_shift = 0
+  const clearCode = 1 << minCodeSize
+  const codeMask = clearCode - 1
+  const eoiCode = clearCode + 1
+  let nextCode = eoiCode + 1
+  let curCodeSize = minCodeSize + 1
+  let curShift = 0
   let cur = 0
-  function emit_bytes_to_buffer(bit_block_size: number) {
-    while (cur_shift >= bit_block_size) {
+
+  function emitBytesToBuffer(bitBlockSize: number) {
+    while (curShift >= bitBlockSize) {
       writeByte(cur & 0xFF)
       cur >>= 8
-      cur_shift -= 8
-      if (calculateDistance(cur_subblock) === 256) {
-        writeByte(255, cur_subblock)
-        cur_subblock = getCursor()
+      curShift -= 8
+      if (calculateDistance(curSubblock) === 256) {
+        writeByte(255, curSubblock)
+        curSubblock = getCursor()
         writeByte(0)
       }
     }
   }
-  function emit_code(c: number) {
-    cur |= c << cur_shift
-    cur_shift += cur_code_size
-    emit_bytes_to_buffer(8)
+
+  function emitCode(c: number) {
+    cur |= c << curShift
+    curShift += curCodeSize
+    emitBytesToBuffer(8)
   }
-  let ib_code = data[0] & code_mask // Load first input index.
-  let code_table: Record<number, number> = { } // Key'd on our 20-bit "tuple".
-  emit_code(clear_code) // Spec says first code should be a clear code.
-  for (let i = 1, il = data.length; i < il; ++i) {
-    const k = data[i] & code_mask
-    const cur_key = ib_code << 8 | k // (prev, k) unique tuple.
-    const cur_code = code_table[cur_key] // buffer + k.
-    if (cur_code === undefined) {
-      cur |= ib_code << cur_shift
-      cur_shift += cur_code_size
-      while (cur_shift >= 8) {
+
+  let ibCode = data[0] & codeMask // Load first input index.
+  let codeTable: Record<number, number> = { } // Key'd on our 20-bit "tuple".
+  let curKey: number
+  let curCode: number
+  let k: number
+  emitCode(clearCode) // Spec says first code should be a clear code.
+  for (let len = data.length, i = 1; i < len; ++i) {
+    k = data[i] & codeMask
+    curKey = ibCode << 8 | k // (prev, k) unique tuple.
+    curCode = codeTable[curKey] // buffer + k.
+    if (curCode === undefined) {
+      cur |= ibCode << curShift
+      curShift += curCodeSize
+      while (curShift >= 8) {
         writeByte(cur & 0xFF)
         cur >>= 8
-        cur_shift -= 8
-        if (calculateDistance(cur_subblock) === 256) {
-          writeByte(255, cur_subblock)
-          cur_subblock = getCursor()
+        curShift -= 8
+        if (calculateDistance(curSubblock) === 256) {
+          writeByte(255, curSubblock)
+          curSubblock = getCursor()
           writeByte(0)
         }
       }
-      if (next_code === 4096) {
+      if (nextCode === 4096) {
         // Table full, need a clear.
-        emit_code(clear_code)
-        next_code = eoi_code + 1
-        cur_code_size = minCodeSize + 1
-        code_table = {}
+        emitCode(clearCode)
+        nextCode = eoiCode + 1
+        curCodeSize = minCodeSize + 1
+        codeTable = {}
       } else {
-        if (next_code >= (1 << cur_code_size)) ++cur_code_size
-        code_table[cur_key] = next_code++ // Insert into code table.
+        if (nextCode >= (1 << curCodeSize)) ++curCodeSize
+        codeTable[curKey] = nextCode++ // Insert into code table.
       }
-      ib_code = k // Index buffer to single input k.
+      ibCode = k // Index buffer to single input k.
     } else {
-      ib_code = cur_code // Index buffer to sequence in code table.
+      ibCode = curCode // Index buffer to sequence in code table.
     }
   }
-  emit_code(ib_code) // There will still be something in the index buffer.
-  emit_code(eoi_code) // End Of Information.
-  emit_bytes_to_buffer(1)
-  if (calculateDistance(cur_subblock) === 1) {
-    writeByte(0, cur_subblock)
+  emitCode(ibCode) // There will still be something in the index buffer.
+  emitCode(eoiCode) // End Of Information.
+  emitBytesToBuffer(1)
+  if (calculateDistance(curSubblock) === 1) {
+    writeByte(0, curSubblock)
   } else {
-    writeByte(calculateDistance(cur_subblock) - 1, cur_subblock)
+    writeByte(calculateDistance(curSubblock) - 1, curSubblock)
     writeByte(0)
   }
 }

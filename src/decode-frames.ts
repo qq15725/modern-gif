@@ -1,7 +1,8 @@
 import { decode } from './decode'
-import { decodeFrameButUndisposed } from './decode-frame-but-undisposed'
-import { SUPPORT_IMAGE_DECODER } from './utils'
-import type { Frame, Gif, GifBuffer } from './gif'
+import { mergeUint8Array, resovleUint8Array } from './utils'
+import { lzwDecode } from './lzw-decode'
+import { deinterlace } from './deinterlace'
+import type { Frame, Gif } from './gif'
 
 export interface DecodedFrame {
   width: number
@@ -10,106 +11,121 @@ export interface DecodedFrame {
   data: Uint8ClampedArray
 }
 
-export async function decodeFrames(
-  data: GifBuffer,
-  options: {
-    gif?: Gif
-    frameIndexes?: number[]
-  } = {},
-): Promise<DecodedFrame[]> {
-  const { frameIndexes } = options
+export interface DecodeFramesOptions {
+  gif?: Gif
+  range?: number[]
+}
 
-  if (SUPPORT_IMAGE_DECODER && await ImageDecoder.isTypeSupported('image/gif')) {
-    const decoder = new ImageDecoder({ data, type: 'image/gif' })
-    await decoder.completed
-    await decoder.tracks.ready
-    const track = decoder.tracks.selectedTrack
-    if (track) {
-      const allFrameIndexes = [...new Array(track.frameCount)].map((_, frameIndex) => frameIndex)
-      const frames = await Promise.all(
-        (frameIndexes ? allFrameIndexes.slice(frameIndexes[0], frameIndexes[1] + 1) : allFrameIndexes)
-          .map(
-            frameIndex => decoder.decode({ frameIndex }).then(res => {
-              const frame = res.image
-              const canvas = document.createElement('canvas')
-              canvas.width = frame.displayWidth
-              canvas.height = frame.displayHeight
-              const context2d = canvas.getContext('2d')!
-              context2d.drawImage(frame, 0, 0)
-              const imageData = context2d.getImageData(0, 0, canvas.width, canvas.height)
-              return {
-                width: frame.displayWidth,
-                height: frame.displayHeight,
-                delay: (frame.duration ?? 100_0000) / 1_000,
-                data: imageData.data,
-              }
-            }),
-          ),
-      )
-      decoder.close()
-      return frames
-    }
-  }
+export function decodeFrames(
+  source: BufferSource,
+  options: DecodeFramesOptions = {},
+): DecodedFrame[] {
+  const uint8Array = resovleUint8Array(source)
 
-  const { gif = decode(data) } = options
-  const { frames, width: gifWidth, height: gifHeight } = gif
-  const rangeFrames = frameIndexes ? frames.slice(frameIndexes[0], frameIndexes[1] + 1) : frames
-  const pixels = new Uint8ClampedArray(gifWidth * gifHeight * 4)
+  const {
+    gif = decode(source),
+    range,
+  } = options
+
+  const {
+    width: globalWidth,
+    height: globalHeight,
+    colorTable: globalColorTable,
+    frames: globalFrames,
+  } = gif
+
+  const frames = range
+    ? globalFrames.slice(range[0], range[1] + 1)
+    : globalFrames
+
+  const pixels = new Uint8ClampedArray(globalWidth * globalHeight * 4)
   let previousFrame: Frame | undefined
 
-  function getRange(frame: Frame) {
-    const { left, top, width, height } = frame
-    const start = (top * gifWidth + left) * 4
-    const end = ((top + height) * gifWidth + (left + width)) * 4
-    return { start, end }
-  }
+  return frames.map(frame => {
+    const {
+      left,
+      top,
+      width,
+      height,
+      interlaced,
+      localColorTable,
+      colorTable,
+      lzwMinCodeSize,
+      imageDataPositions,
+      graphicControl,
+      disposal,
+      delay,
+    } = frame
 
-  let uint8Array: Uint8Array
-  if (data instanceof ArrayBuffer) {
-    uint8Array = new Uint8Array(data)
-  } else if (data instanceof Uint8Array) {
-    uint8Array = data
-  } else {
-    uint8Array = new Uint8Array(data.buffer)
-  }
+    const bottom = top + height
 
-  return rangeFrames.map(frame => {
-    const { index, disposal } = frame
-    const image = decodeFrameButUndisposed(uint8Array, gif, index)
+    const {
+      transparent,
+      transparentIndex: transparentIndex_,
+    } = graphicControl ?? {}
+
+    const palette = localColorTable ? colorTable : globalColorTable
+    const transparentIndex = transparent ? transparentIndex_ : -1
+
+    const compressedData = mergeUint8Array(
+      ...imageDataPositions.map(
+        ([begin, length]) => uint8Array.subarray(begin, begin + length),
+      ),
+    )
+
+    let colorIndexes = lzwDecode(lzwMinCodeSize, compressedData, width * height)
+
+    if (interlaced) {
+      colorIndexes = deinterlace(colorIndexes, width)
+    }
 
     if (previousFrame && previousFrame?.disposal !== 1) {
       const { left, top, width, height } = previousFrame
-      const { start, end } = getRange(previousFrame)
-      for (let i = start; i < end; i += 4) {
-        const p = i / 4
-        const cy = p / gifWidth
-        const cx = p % gifWidth
-        if (cx >= left && cx < left + width && cy >= top && cy < top + height) {
-          pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0
+      const bottom = top + height
+      for (let y = top; y < bottom; y++) {
+        const globalOffset = y * globalWidth + left
+        for (let x = 0; x < width; x++) {
+          const index = (globalOffset + x) * 4
+          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
         }
       }
     }
 
-    const { start, end } = getRange(frame)
-
-    for (let i = start; i < end; i += 4) {
-      if (image.data[i + 3] !== 0) {
-        pixels[i] = image.data[i]
-        pixels[i + 1] = image.data[i + 1]
-        pixels[i + 2] = image.data[i + 2]
-        pixels[i + 3] = image.data[i + 3]
+    for (let y = top; y < bottom; y++) {
+      const globalOffset = y * globalWidth + left
+      const localOffset = (y - top) * width
+      for (let x = 0; x < width; x++) {
+        const colorIndex = colorIndexes[localOffset + x]
+        if (colorIndex === transparentIndex) continue
+        const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
+        const index = (globalOffset + x) * 4
+        pixels[index] = r
+        pixels[index + 1] = g
+        pixels[index + 2] = b
+        pixels[index + 3] = 255
       }
     }
 
-    if (disposal !== 3) {
-      previousFrame = frame
-    }
+    if (disposal !== 3) previousFrame = frame
 
     return {
-      width: gifWidth,
-      height: gifHeight,
-      delay: frame.delay,
+      width: globalWidth,
+      height: globalHeight,
+      delay,
       data: pixels.slice(0),
     }
+  })
+}
+
+export function decodeFramesInWorker(source: BufferSource, workerUrl: string): Promise<DecodedFrame[]> {
+  return new Promise(resolve => {
+    const gif = resovleUint8Array(source)
+    const worker = new Worker(workerUrl)
+    worker.onmessage = event => {
+      const { uuid, frames } = event.data
+      if (uuid !== 'decode-frames') return
+      resolve(frames)
+    }
+    worker.postMessage({ type: 'decode-frames', uuid: 'decode-frames', gif }, [gif.buffer])
   })
 }

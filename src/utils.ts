@@ -1,7 +1,5 @@
 // Constants
 export const PREFIX = '[modern-gif]'
-export const IN_BROWSER = typeof window !== 'undefined'
-export const SUPPORT_IMAGE_DECODER = IN_BROWSER && 'ImageDecoder' in window
 
 // GIF
 export const SIGNATURE = 'GIF'
@@ -19,3 +17,34 @@ export const TRAILER = 0x3B
 
 // Console
 export const consoleWarn = (...args: any[]) => console.warn(PREFIX, ...args)
+
+export function mergeUint8Array(...uint8Arrays: Uint8Array[]): Uint8Array {
+  const container = new Uint8Array(
+    uint8Arrays.reduce((total, uint8Array) => total + uint8Array.byteLength, 0),
+  )
+  uint8Arrays.reduce((offset, uint8Array) => {
+    container.set(uint8Array, offset)
+    return offset + uint8Array.byteLength
+  }, 0)
+  return container
+}
+
+export function resovleUint8Array(source: BufferSource): Uint8Array {
+  if (source instanceof Uint8Array) {
+    return source
+  } else if (source instanceof ArrayBuffer) {
+    return new Uint8Array(source)
+  } else {
+    return new Uint8Array(source.buffer)
+  }
+}
+
+export function resovleDataView(source: BufferSource): DataView {
+  if (source instanceof DataView) {
+    return source
+  } else if (source instanceof ArrayBuffer) {
+    return new DataView(source)
+  } else {
+    return new DataView(source.buffer)
+  }
+}

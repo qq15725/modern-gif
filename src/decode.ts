@@ -14,9 +14,9 @@ import {
   consoleWarn,
 } from './utils'
 import { createReader } from './create-reader'
-import type { Application, Frame, Gif, GifBuffer, GraphicControl, PlainText } from './gif'
+import type { Application, Frame, Gif, GraphicControl } from './gif'
 
-export function decode(data: GifBuffer): Gif {
+export function decode(source: BufferSource): Gif {
   const gif = {} as Gif
 
   const {
@@ -28,7 +28,7 @@ export function decode(data: GifBuffer): Gif {
     readBits,
     readColorTable,
     readSubBlock,
-  } = createReader(data)
+  } = createReader(source)
   const createFrame = () => ({ index: 0, delay: 100, disposal: 0 }) as Frame
 
   // Header
@@ -45,9 +45,9 @@ export function decode(data: GifBuffer): Gif {
   // ↓ <Packed Fields>
   const bits = readBits()
   gif.globalColorTable = Boolean(bits[0])
-  gif.colorResoluTion = (parseInt(`${ bits[1] }${ bits[2] }${ bits[3] }`, 2) + 1) as any
+  gif.colorResoluTion = (parseInt(bits.slice(1, 4).join(''), 2) + 1) as any
   gif.colorTableSorted = Boolean(bits[4])
-  const colorTableSize = parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2)
+  const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
   gif.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
   // ↑ <Packed Fields>
   gif.backgroundColorIndex = readByte()
@@ -55,15 +55,22 @@ export function decode(data: GifBuffer): Gif {
 
   // Global Color Table
   if (gif.globalColorTable) {
-    gif.colorTable = readColorTable(gif.colorTableSize)
+    if (gif.colorTableSize) {
+      gif.colorTable = readColorTable(gif.colorTableSize)
+    } else {
+      readSubBlock()
+    }
   }
 
   gif.frames = [] as Frame[]
 
   let frame = createFrame()
+  const flags = []
+  const extensionFlags = []
 
   while (true) {
     const flag = readByte()
+    flags.push(flag)
 
     if (flag === IMAGE_DESCRIPTOR) {
       frame.left = readUnsigned()
@@ -75,8 +82,8 @@ export function decode(data: GifBuffer): Gif {
       frame.localColorTable = Boolean(bits[0])
       frame.interlaced = Boolean(bits[1])
       frame.colorTableSorted = Boolean(bits[2])
-      frame.reserved = parseInt(`${ bits[3] }${ bits[4] }`, 2) as any
-      const colorTableSize = parseInt(`${ bits[5] }${ bits[6] }${ bits[7] }`, 2)
+      frame.reserved = parseInt(bits.slice(3, 5).join(''), 2) as any
+      const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
       frame.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
       // ↑ <Packed Fields>
 
@@ -106,12 +113,15 @@ export function decode(data: GifBuffer): Gif {
 
     if (flag === EXTENSION) {
       const extensionFlag = readByte()
+      extensionFlags.push(extensionFlag)
 
       if (extensionFlag === EXTENSION_APPLICATION) {
         if (readByte() !== EXTENSION_APPLICATION_BLOCK_SIZE) continue
-        const application = {} as Application
-        application.identifier = readString(8)
-        application.code = readString(3)
+        const application: Application = {
+          identifier: readString(8),
+          code: readString(3),
+          data: [],
+        }
         if (`${ application.identifier }${ application.code }` === 'NETSCAPE2.0') {
           if (readByte() === 3) {
             gif.looped = Boolean(readByte())
@@ -130,46 +140,56 @@ export function decode(data: GifBuffer): Gif {
 
       if (extensionFlag === EXTENSION_GRAPHIC_CONTROL) {
         if (readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
-        const graphicControl = {} as GraphicControl
-        // ↓ <Packed Fields>
         const bits = readBits()
-        graphicControl.reserved = parseInt(`${ bits[0] }${ bits[1] }${ bits[2] }`, 2) as any
-        frame.disposal = graphicControl.disposal = parseInt(`${ bits[3] }${ bits[4] }${ bits[5] }`, 2) as any
-        graphicControl.userInput = Boolean(bits[6])
-        graphicControl.transparent = Boolean(bits[7])
-        // ↑ <Packed Fields>
-        graphicControl.delayTime = readUnsigned()
-        graphicControl.transparentIndex = readByte()
+        const graphicControl: GraphicControl = {
+          // ↓ <Packed Fields>
+          reserved: parseInt(bits.slice(0, 3).join(''), 2) as any,
+          disposal: parseInt(bits.slice(3, 6).join(''), 2) as any,
+          userInput: Boolean(bits[6]),
+          transparent: Boolean(bits[7]),
+          // ↑ <Packed Fields>
+          delayTime: readUnsigned(),
+          transparentIndex: readByte(),
+        }
         readSubBlock()
 
         frame.graphicControl = graphicControl
+        frame.disposal = graphicControl.disposal
         frame.delay = (graphicControl.delayTime || 10) * 10
         continue
       }
 
       if (extensionFlag === EXTENSION_PLAIN_TEXT) {
         if (readByte() !== EXTENSION_PLAIN_TEXT_BLOCK_SIZE) continue
-        const plainText = {} as PlainText
-        plainText.left = readUnsigned()
-        plainText.top = readUnsigned()
-        plainText.width = readUnsigned()
-        plainText.height = readUnsigned()
-        plainText.cellWidth = readByte()
-        plainText.cellHeight = readByte()
-        plainText.colorIndex = readByte()
-        plainText.backgroundColorIndex = readByte()
-        plainText.data = readSubBlock()
-        frame.plainText = plainText
+        frame.plainText = {
+          left: readUnsigned(),
+          top: readUnsigned(),
+          width: readUnsigned(),
+          height: readUnsigned(),
+          cellWidth: readByte(),
+          cellHeight: readByte(),
+          colorIndex: readByte(),
+          backgroundColorIndex: readByte(),
+          data: readSubBlock(),
+        }
         continue
       }
 
-      consoleWarn(`Unknown extension block: 0x${ extensionFlag.toString(16) }`)
+      consoleWarn(
+        `Unknown extension block: 0x${ extensionFlag.toString(16) }`,
+        flags.slice(0, flags.length - 1).map(val => `0x${ val.toString(16) }`),
+        extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${ val.toString(16) }`),
+      )
       continue
     }
 
     if (flag === TRAILER) break
 
-    consoleWarn(`Unknown block: 0x${ flag.toString(16) }`)
+    consoleWarn(
+      `Unknown block: 0x${ flag.toString(16) }`,
+      flags.slice(0, flags.length - 1).map(val => `0x${ val.toString(16) }`),
+      extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${ val.toString(16) }`),
+    )
   }
 
   return gif

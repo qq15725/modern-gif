@@ -1,9 +1,19 @@
+import { decodeFrames } from './decode-frames'
 import { encodeFrame } from './encode-frame'
 
 self.onmessage = event => {
-  const { index, frame } = event.data
+  const { data: eventData } = event
+  const { type = 'encode-frames', uuid } = eventData
 
-  const data = encodeFrame(frame)
+  if (type === 'encode-frame') {
+    const { frame, indexes } = eventData
+    const data = encodeFrame(frame, indexes)
+    return self.postMessage({ uuid, data }, [data.buffer])
+  }
 
-  self.postMessage({ index, data }, [data.buffer])
+  if (type === 'decode-frames') {
+    const { gif } = eventData
+    const frames = decodeFrames(gif)
+    return self.postMessage({ uuid, frames }, frames.map(frame => frame.data.buffer))
+  }
 }

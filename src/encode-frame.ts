@@ -1,11 +1,12 @@
-import { createColorTableByMmcq } from './create-color-table-by-mmcq'
-import { createColorTableByNeuquant } from './create-color-table-by-neuquant'
 import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from './utils'
 import { lzwEncode } from './lzw-encode'
 import { createWriter } from './create-writer'
 import type { EncodeFrameOptions } from './options'
 
-export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
+export function encodeFrame(
+  frame: EncodeFrameOptions,
+  indexes: Uint8Array,
+): Uint8Array {
   const writer = createWriter()
 
   const {
@@ -21,17 +22,15 @@ export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
     width = 0,
     height = 0,
     delay = 100,
-    algorithm = 'NeuQuant',
-    imageData,
-  } = options
+    colorTable,
+  } = frame
 
   let {
     disposal = 0,
-    colorTable,
-  } = options
+  } = frame
 
-  let transparent = options.graphicControl?.transparent
-  let transparentIndex = options.graphicControl?.transparentIndex ?? 255
+  const transparent = frame.graphicControl?.transparent
+  let transparentIndex = frame.graphicControl?.transparentIndex ?? 255
 
   if (left < 0 || left > 65535) throw new Error('Left invalid.')
   if (top < 0 || top > 65535) throw new Error('Top invalid.')
@@ -39,62 +38,15 @@ export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
   if (height <= 0 || height > 65535) throw new Error('Height invalid.')
 
   // color table
-  let findClosestRGB: any | undefined
-  if (!colorTable) {
-    const res = algorithm === 'MMCQ'
-      ? createColorTableByMmcq(imageData, 255)
-      : createColorTableByNeuquant(imageData, 255)
-    colorTable = res.colorTable
-    findClosestRGB = res.findClosestRGB
-    if (colorTable.length < 256) {
-      const diff = 256 - colorTable.length
-      for (let i = 0; i < diff; i++) {
-        colorTable.push([0, 0, 0])
-      }
-    }
-    transparent = true
-    transparentIndex = 255
-  }
+  let minCodeSize = 8
   let colorTableLength = colorTable ? colorTable.length : 0
-  if (colorTableLength < 2 || colorTableLength > 256 || colorTableLength & (colorTableLength - 1)) {
-    throw new Error('Invalid color table length, must be power of 2 and 2 .. 256.')
-  }
-  let minCodeSize = 0
-  // eslint-disable-next-line no-cond-assign
-  while (colorTableLength >>= 1) ++minCodeSize
-  colorTableLength = 1 << minCodeSize // Now we can easily get it back.
-
-  if (!findClosestRGB) {
-    findClosestRGB = (r: number, g: number, b: number) => {
-      if (!colorTable) return -1
-      let minpos = 0
-      let dmin = 256 * 256 * 256
-      for (let index = 0; index < colorTableLength; index++) {
-        const dr = r - (colorTable[index][0] & 0xFF)
-        const dg = g - (colorTable[index][1] & 0xFF)
-        const db = b - (colorTable[index][2] & 0xFF)
-        const d = dr * dr + dg * dg + db * db
-        if (d < dmin) {
-          dmin = d
-          minpos = index
-        }
-      }
-      return minpos
+  if (colorTableLength) {
+    if (colorTableLength < 2 || colorTableLength > 256 || colorTableLength & (colorTableLength - 1)) {
+      throw new Error('Invalid color table length, must be power of 2 and 2 .. 256.')
     }
-  }
-
-  const imageDataLength = imageData.length
-  const indexes = new Uint8Array(imageDataLength / 4)
-  for (let i = 0; i < imageDataLength; i += 4) {
-    if (imageData[i + 3] === 0) {
-      indexes[i / 4] = 255
-    } else {
-      indexes[i / 4] = findClosestRGB?.(
-        imageData[i] & 0xFF,
-        imageData[i + 1] & 0xFF,
-        imageData[i + 2] & 0xFF,
-      ) ?? -1
-    }
+    // eslint-disable-next-line no-cond-assign
+    while (colorTableLength >>= 1) ++minCodeSize
+    // colorTableLength = 1 << minCodeSize // Now we can easily get it back.
   }
 
   // Graphic control extension
@@ -102,9 +54,6 @@ export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
   writeByte(EXTENSION_GRAPHIC_CONTROL) // GCE label
   writeByte(EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) // block size
   if (transparent) {
-    if (!transparentIndex || transparentIndex < 0 || transparentIndex >= colorTableLength) {
-      throw new Error('Transparent color index.')
-    }
     if (!disposal) {
       disposal = 2 // force clear if using transparent color
     }
@@ -123,7 +72,7 @@ export function encodeFrame(options: EncodeFrameOptions): Uint8Array {
 
   // Image descriptor
   writeByte(IMAGE_DESCRIPTOR) // image separator
-  writeUnsigned(left) // image position x,y = 0,0
+  writeUnsigned(left) // image position
   writeUnsigned(top)
   writeUnsigned(width) // image size
   writeUnsigned(height)

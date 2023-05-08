@@ -2,7 +2,7 @@ import { EXTENSION, EXTENSION_APPLICATION, EXTENSION_APPLICATION_BLOCK_SIZE, SIG
 import { createWriter } from './create-writer'
 import type { EncoderOptions } from './options'
 
-export function encodeBasicInfo(options: EncoderOptions) {
+export function encodeHeader(options: EncoderOptions) {
   const gif = {
     version: '89a',
     looped: true,

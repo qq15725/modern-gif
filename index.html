@@ -23,14 +23,19 @@
 
 <body>
   <script type="module" async>
-    import { createEncoder, decode, decodeFrames } from './src'
+    import workerUrl from './dist/worker?url'
+    import {
+      createEncoder,
+      decode,
+      decodeFramesInWorker,
+    } from './src'
 
-    const data = await fetch(document.querySelector('img').src)
+    const input = await fetch(document.querySelector('img').src)
       .then(res => res.arrayBuffer())
 
     // eslint-disable-next-line no-console
     console.time('decode')
-    const gif = decode(data)
+    const gif = decode(input)
     // eslint-disable-next-line no-console
     console.timeEnd('decode')
 
@@ -40,28 +45,29 @@
     document.querySelector('button').onclick = async () => {
       // eslint-disable-next-line no-console
       console.time('decode frames')
-      const frames = await decodeFrames(new Uint8Array(data))
+      const frames = await decodeFramesInWorker(input, workerUrl)
       // eslint-disable-next-line no-console
       console.timeEnd('decode frames')
 
       const encoder = createEncoder({
+        workerUrl,
+        workerNumber: 2,
         width: gif.width,
         height: gif.height,
+        maxColors: 256,
       })
       // eslint-disable-next-line no-console
       console.time('encode')
       frames.forEach(frame => {
         encoder.encode({
-          width: gif.width,
-          height: gif.height,
           imageData: frame.data,
         })
       })
-      const gifData = await encoder.flush()
+      const output = await encoder.flush()
       // eslint-disable-next-line no-console
       console.timeEnd('encode')
 
-      const blob = new Blob([gifData], { type: 'image/gif' })
+      const blob = new Blob([output], { type: 'image/gif' })
       const img = new Image()
       img.src = URL.createObjectURL(blob)
       document.body.append(img)

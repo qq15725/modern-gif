@@ -33,12 +33,6 @@ export interface PlainText {
   data: number[]
 }
 
-// [R, G, B]
-export type RGB = [number, number, number]
-
-// [begin, length]
-export type ImageDataPosition = [number, number]
-
 // Image Descriptor
 export interface Frame {
   left: number
@@ -53,14 +47,14 @@ export interface Frame {
   colorTableSize: number
   // ↑ <Packed Fields>
 
-  // Local Color Table
-  colorTable?: RGB[]
+  // Local Color Table - [r, g, b][]
+  colorTable?: number[][]
 
   // LZW Minimum Code Size
   lzwMinCodeSize: number
 
-  // Image Data
-  imageDataPositions: ImageDataPosition[]
+  // Image Data - [begin, length][]
+  imageDataPositions: number[][]
 
   // Extensions (89a)
   application?: Application
@@ -88,7 +82,7 @@ export interface Gif87a {
   pixelAspectRatio: number
 
   // Global Color Table
-  colorTable?: RGB[]
+  colorTable?: number[][]
 
   // Image Descriptor
   frames: Frame[]
@@ -104,5 +98,3 @@ export interface Gif89a extends Gif87a {
 export interface Gif extends Gif89a {
   version: '89a' | '87a'
 }
-
-export type GifBuffer = ArrayBuffer | ArrayBufferView

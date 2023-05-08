@@ -2,7 +2,7 @@ export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: num
   const MAX_STACK_SIZE = 4096
   const nullCode = -1
   const npix = pixelCount
-  let available, code_mask, code_size, in_code, old_code, code, i
+  let available, codeMask, codeSize, inCode, oldCode, code, i
 
   const dstPixels = new Array(pixelCount)
   const prefix = new Array(MAX_STACK_SIZE)
@@ -10,13 +10,13 @@ export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: num
   const pixelStack = new Array(MAX_STACK_SIZE + 1)
 
   // Initialize GIF data stream decoder.
-  const data_size = minCodeSize
-  const clear = 1 << data_size
-  const end_of_information = clear + 1
+  const dataSize = minCodeSize
+  const clear = 1 << dataSize
+  const endOfInformation = clear + 1
   available = clear + 2
-  old_code = nullCode
-  code_size = data_size + 1
-  code_mask = (1 << code_size) - 1
+  oldCode = nullCode
+  codeSize = dataSize + 1
+  codeMask = (1 << codeSize) - 1
   for (code = 0; code < clear; code++) {
     prefix[code] = 0
     suffix[code] = code
@@ -27,7 +27,7 @@ export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: num
   datum = bits = first = top = pi = bi = 0
   for (i = 0; i < npix;) {
     if (top === 0) {
-      if (bits < code_size) {
+      if (bits < codeSize) {
         // get the next byte
         datum += data[bi] << bits
 
@@ -36,31 +36,31 @@ export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: num
         continue
       }
       // Get the next code.
-      code = datum & code_mask
-      datum >>= code_size
-      bits -= code_size
+      code = datum & codeMask
+      datum >>= codeSize
+      bits -= codeSize
       // Interpret the code
-      if (code > available || code === end_of_information) {
+      if (code > available || code === endOfInformation) {
         break
       }
       if (code === clear) {
         // Reset decoder.
-        code_size = data_size + 1
-        code_mask = (1 << code_size) - 1
+        codeSize = dataSize + 1
+        codeMask = (1 << codeSize) - 1
         available = clear + 2
-        old_code = nullCode
+        oldCode = nullCode
         continue
       }
-      if (old_code === nullCode) {
+      if (oldCode === nullCode) {
         pixelStack[top++] = suffix[code]
-        old_code = code
+        oldCode = code
         first = code
         continue
       }
-      in_code = code
+      inCode = code
       if (code === available) {
         pixelStack[top++] = first
-        code = old_code
+        code = oldCode
       }
       while (code > clear) {
         pixelStack[top++] = suffix[code]
@@ -74,15 +74,15 @@ export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: num
       // if not, just continue with current table until a clear code is found
       // (deferred clear code implementation as per GIF spec)
       if (available < MAX_STACK_SIZE) {
-        prefix[available] = old_code
+        prefix[available] = oldCode
         suffix[available] = first
         available++
-        if ((available & code_mask) === 0 && available < MAX_STACK_SIZE) {
-          code_size++
-          code_mask += available
+        if ((available & codeMask) === 0 && available < MAX_STACK_SIZE) {
+          codeSize++
+          codeMask += available
         }
       }
-      old_code = in_code
+      oldCode = inCode
     }
     // Pop a pixel off the pixel stack.
     top--

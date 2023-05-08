@@ -18,13 +18,6 @@
   </a>
 </p>
 
-## Features
-
-- ⚡️ GIF decode
-- 🤙🏻 GIF encode
-- ☁️ GIF encode frame supporte in the Web Worker
-- 🦾 TypeScript, of course
-
 ## 📦 Install
 
 ```sh

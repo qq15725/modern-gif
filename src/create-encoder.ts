@@ -1,88 +1,140 @@
-import {
-  TRAILER,
-} from './utils'
+import { createPalette } from 'modern-palette'
+import { TRAILER } from './utils'
+import { encodeHeader } from './encode-header'
 import { encodeFrame } from './encode-frame'
-import { encodeBasicInfo } from './encode-basic-info'
+import { croppingFrames } from './cropping-frames'
+import { convertFramesToIndexes } from './convert-frames-to-indexes'
 import type { EncodeFrameOptions, EncoderOptions } from './options'
 
-export interface Encoder {
-  encode: (frame: EncodeFrameOptions) => void
-  flush: () => Promise<Uint8Array>
-}
-
-export function createEncoder(options: EncoderOptions): Encoder {
+export function createEncoder(options: EncoderOptions) {
   const {
+    width,
+    height,
     workerUrl,
     workerNumber = 1,
+    colorTableSize = 256,
+    maxColors = colorTableSize - 1,
+    backgroundColorIndex = colorTableSize - 1,
   } = options
 
-  let lastIndex = 0
-  let flushResolve: any | undefined
-  const encodeing = new Set<number>()
-  let frames: Uint8Array[] = []
-  let framesDataLength = 0
+  let frames: EncodeFrameOptions[] = []
 
-  function onEncoded(index: number) {
-    encodeing.delete(index)
-    !encodeing.size && flushResolve?.()
-  }
-
-  const basicInfo = encodeBasicInfo(options)
-
-  const workers = [...new Array(workerUrl ? workerNumber : 0)].map(() => {
+  const transparentIndex = backgroundColorIndex
+  const palette = createPalette({ maxColors })
+  const workersLength = workerUrl ? workerNumber : 0
+  const workersCallbacks = new Map<number, any>()
+  const workers = [...new Array(workersLength)].map(() => {
     const worker = new Worker(workerUrl!)
-    worker.onmessage = event => {
-      const { index, data } = event.data
-      frames[index] = data
-      framesDataLength += data.length
-      onEncoded(index)
+    worker.onmessage = (res) => {
+      const { uuid, data } = res.data
+      workersCallbacks.get(uuid)?.(data)
+      workersCallbacks.delete(uuid)
     }
-    worker.onmessageerror = event => onEncoded(event.data.index)
     return worker
   })
 
-  return {
-    encode: frame => {
-      const index = lastIndex++
-      if (workers.length && frame.imageData.buffer) {
-        encodeing.add(index)
-        workers[index & (workers.length - 1)].postMessage(
-          { index, frame },
-          [frame.imageData.buffer],
-        )
-      } else {
-        const data = encodeFrame(frame)
-        frames[index] = data
-        framesDataLength += data.length
-        onEncoded(index)
-      }
-    },
-    flush: () => {
-      return new Promise(resolve => {
-        const timer = setTimeout(() => flushResolve?.(), 30000)
-        flushResolve = () => {
-          timer && clearTimeout(timer)
+  let i = 0
+  function execInWorker(message: any, transfer: Transferable[]) {
+    if (!workersLength) return undefined
+    return new Promise(resolve => {
+      const uuid = i++
+      message.uuid = uuid
+      workersCallbacks.set(uuid, resolve)
+      workers[uuid % workersLength].postMessage(message, transfer)
+    })
+  }
 
-          const data = new Uint8Array(basicInfo.length + framesDataLength + 1)
-          data.set(basicInfo)
-          let offset = basicInfo.length
-          frames.forEach(frame => {
-            data.set(frame, offset)
-            offset += frame.length
+  async function encodeFrameInWorker(
+    frame: EncodeFrameOptions,
+    indexes: Uint8Array,
+  ): Promise<ReturnType<typeof encodeFrame>> {
+    const result = await execInWorker(
+      { type: 'encode-frame', frame, indexes },
+      [frame.imageData.buffer, indexes.buffer],
+    )
+    if (result) return result as any
+    return encodeFrame(frame, indexes)
+  }
+
+  return {
+    encode: (frame: EncodeFrameOptions): void => {
+      frames.push({ width, height, ...frame })
+      palette.addSample(frame.imageData)
+    },
+    flush: (): Promise<Uint8Array> => {
+      return new Promise((resolve) => {
+        const colorTable = palette
+          .generate()
+          .getColors('rgb')
+          .map(val => val.color)
+
+        while (colorTable.length < colorTableSize) {
+          colorTable.push([0, 0, 0])
+        }
+
+        const encodedHeader = encodeHeader({
+          colorTable,
+          backgroundColorIndex,
+          ...options,
+        })
+
+        const { allIndexes, transparents } = convertFramesToIndexes(
+          frames,
+          palette,
+          transparentIndex,
+        )
+
+        const { boxes, allIndexes: croppedAllIndexes } = croppingFrames(
+          frames,
+          allIndexes,
+          transparents,
+          transparentIndex,
+        )
+
+        Promise.all(frames.map((frame, index) => {
+          const box = boxes[index]
+          return encodeFrameInWorker(
+            {
+              ...frame,
+              left: box.left,
+              top: box.top,
+              width: box.width,
+              height: box.height,
+              disposal: box.disposal,
+              graphicControl: {
+                ...frame.graphicControl,
+                transparent: true,
+                transparentIndex: backgroundColorIndex,
+              } as any,
+            },
+            croppedAllIndexes[index],
+          )
+        })).then(encodedFrames => {
+          const encodedBody = new Uint8Array(
+            encodedFrames.reduce((total, frameData) => total + frameData.byteLength, 0),
+          )
+
+          let offset = 0
+          encodedFrames.forEach((encoded) => {
+            encodedBody.set(encoded, offset)
+            offset += encoded.length
           })
-          // Trailer
+
+          const data = new Uint8Array(
+            encodedHeader.length + encodedBody.byteLength + 1,
+          )
+          data.set(encodedHeader)
+          data.set(encodedBody, encodedHeader.byteLength)
           data[data.length - 1] = TRAILER
+
           resolve(data)
 
           // reset
-          lastIndex = 0
-          flushResolve = undefined
-          encodeing.clear()
+          palette.reset()
           frames = []
-          framesDataLength = 0
-        }
-        !encodeing.size && flushResolve?.()
+          workersCallbacks.clear()
+        })
       })
     },
-  } as Encoder
+  }
 }
