@@ -1,3 +1,13 @@
+# [1.0.0](https://github.com/qq15725/modern-gif/compare/v0.1.1...v1.0.0) (2023-05-08)
+
+
+### Features
+
+* palette and encode output size optimization ([e149405](https://github.com/qq15725/modern-gif/commit/e14940529eee8c6015d4a6e7e8d6aea2f79ba960))
+* support ImageDecoder ([1784615](https://github.com/qq15725/modern-gif/commit/178461569a730bc57ae0493a5f8672ae741ad2eb))
+
+
+
 ## [0.1.1](https://github.com/qq15725/modern-gif/compare/v0.1.0...v0.1.1) (2023-02-19)
 
 
