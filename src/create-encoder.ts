@@ -5,6 +5,7 @@ import { encodeFrame } from './encode-frame'
 import { indexFrames } from './index-frames'
 import { cropFrames } from './crop-frames'
 import { createLogger } from './create-logger'
+import { createWorker } from './create-worker'
 import type { Context } from 'modern-palette'
 import type { CropFramesOptions } from './crop-frames'
 import type { IndexFramesOptions } from './index-frames'
@@ -30,38 +31,16 @@ export function createEncoder(options: EncoderOptions) {
   const transparentIndex = backgroundColorIndex
   const log = createLogger(debug)
   const palette = createPalette()
-  const workersLength = workerUrl ? workerNumber : 0
-  const workersCallbacks = new Map<number, any>()
-  const workers = [...new Array(workersLength)].map(() => {
-    const worker = new Worker(workerUrl!)
-    worker.onmessage = (res) => {
-      const { uuid, data } = res.data
-      workersCallbacks.get(uuid)?.(data)
-      workersCallbacks.delete(uuid)
-    }
-    return worker
-  })
 
-  let i = 0
-  function execInWorker(message: any, transfer?: Transferable[], index?: number) {
-    if (!workersLength) return undefined
-    return new Promise(resolve => {
-      const uuid = i++
-      message.uuid = uuid
-      workersCallbacks.set(uuid, resolve)
-      const worker = workers[index ?? (uuid % workersLength)]
-      if (transfer) {
-        worker.postMessage(message, transfer)
-      } else {
-        worker.postMessage(message)
-      }
-    })
-  }
+  const worker = createWorker({
+    workerUrl,
+    workerNumber,
+  })
 
   async function addSampleInWorker(
     options: Uint8ClampedArray,
   ): Promise<void> {
-    const result = await execInWorker(
+    const result = await worker.call(
       { type: 'palette:addSample', options },
       [options.buffer],
       0,
@@ -71,7 +50,7 @@ export function createEncoder(options: EncoderOptions) {
   }
 
   async function generateInWorker(): Promise<Context> {
-    const result = await execInWorker(
+    const result = await worker.call(
       { type: 'palette:generate', options: { maxColors } },
       undefined,
       0,
@@ -84,7 +63,7 @@ export function createEncoder(options: EncoderOptions) {
   async function indexFramesInWorker(
     options: IndexFramesOptions,
   ): Promise<ReturnType<typeof indexFrames>> {
-    const result = await execInWorker(
+    const result = await worker.call(
       { type: 'frames:index', options },
       options.frames.map(val => val.imageData.buffer),
     )
@@ -95,7 +74,7 @@ export function createEncoder(options: EncoderOptions) {
   async function cropFramesInWorker(
     options: CropFramesOptions,
   ): Promise<ReturnType<typeof cropFrames>> {
-    const result = await execInWorker(
+    const result = await worker.call(
       { type: 'frames:crop', options },
       options.frames.map(val => val.imageData.buffer),
     )
@@ -106,7 +85,7 @@ export function createEncoder(options: EncoderOptions) {
   async function encodeFrameInWorker(
     options: EncodeFrameOptions,
   ): Promise<ReturnType<typeof encodeFrame>> {
-    const result = await execInWorker(
+    const result = await worker.call(
       { type: 'frame:encode', options },
       [options.imageData.buffer],
     )
@@ -121,7 +100,7 @@ export function createEncoder(options: EncoderOptions) {
     async encode(frame: EncodeFrameOptions): Promise<void> {
       const index = frames.length
       if (index === 0) {
-        await execInWorker({ type: 'palette:init' }, undefined, 0)
+        await worker.call({ type: 'palette:init' }, undefined, 0)
       }
       log.time(`palette:sample-${ index }`)
       frames.push({ width, height, ...frame })
@@ -193,7 +172,6 @@ export function createEncoder(options: EncoderOptions) {
       // reset
       palette.reset()
       frames = []
-      workersCallbacks.clear()
 
       return output
     },

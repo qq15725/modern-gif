@@ -2,6 +2,7 @@ import { decode } from './decode'
 import { mergeUint8Array, resovleUint8Array } from './utils'
 import { lzwDecode } from './lzw-decode'
 import { deinterlace } from './deinterlace'
+import { createWorker } from './create-worker'
 import type { Frame, Gif } from './gif'
 
 export interface DecodedFrame {
@@ -117,15 +118,11 @@ export function decodeFrames(
   })
 }
 
-export function decodeFramesInWorker(source: BufferSource, workerUrl: string): Promise<DecodedFrame[]> {
-  return new Promise(resolve => {
-    const gif = resovleUint8Array(source)
-    const worker = new Worker(workerUrl)
-    worker.onmessage = event => {
-      const { uuid, data } = event.data
-      if (uuid !== 'frames:decode') return
-      resolve(data)
-    }
-    worker.postMessage({ type: 'frames:decode', uuid: 'frames:decode', source: gif }, [gif.buffer])
-  })
+export async function decodeFramesInWorker(source: BufferSource, workerUrl: string): Promise<DecodedFrame[]> {
+  const gif = resovleUint8Array(source)
+  const worker = createWorker({ workerUrl })
+  return await worker.call(
+    { type: 'frames:decode', source: gif },
+    [gif.buffer],
+  )
 }
