@@ -74,7 +74,10 @@ window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/a
       const context2d = canvas.getContext('2d')
       canvas.width = frame.width
       canvas.height = frame.height
-      context2d.putImageData(frame, 0, 0)
+      context2d.putImageData(
+        new ImageData(frame.imageData, frame.width, frame.height),
+        0, 0,
+      )
       document.body.append(canvas)
     })
 
