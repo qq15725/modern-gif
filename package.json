@@ -55,7 +55,7 @@
     "test": "vitest --no-threads --no-isolate",
     "build:worker": "vite build --config vite.worker.config.ts",
     "build": "vite build && pnpm build:worker && tsc --project tsconfig.build.json",
-    "build:docs": "vite build docs",
+    "build:docs": "pnpm build:worker && vite build docs",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
   },
