@@ -3,10 +3,7 @@ import { lzwEncode } from './lzw-encode'
 import { createWriter } from './create-writer'
 import type { EncodeFrameOptions } from './options'
 
-export function encodeFrame(
-  frame: EncodeFrameOptions,
-  indexes: Uint8Array,
-): Uint8Array {
+export function encodeFrame(frame: EncodeFrameOptions): Uint8Array {
   const writer = createWriter()
 
   const {
@@ -92,7 +89,7 @@ export function encodeFrame(
   }
 
   // LZW
-  lzwEncode(minCodeSize, indexes, writer)
+  lzwEncode(minCodeSize, frame.imageData, writer)
 
   return flush()
 }

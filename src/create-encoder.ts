@@ -1,9 +1,13 @@
 import { createPalette } from 'modern-palette'
-import { TRAILER } from './utils'
+import { TRAILER, mergeUint8Array } from './utils'
 import { encodeHeader } from './encode-header'
 import { encodeFrame } from './encode-frame'
-import { croppingFrames } from './cropping-frames'
-import { convertFramesToIndexes } from './convert-frames-to-indexes'
+import { indexFrames } from './index-frames'
+import { cropFrames } from './crop-frames'
+import { createLogger } from './create-logger'
+import type { Context } from 'modern-palette'
+import type { CropFramesOptions } from './crop-frames'
+import type { IndexFramesOptions } from './index-frames'
 import type { EncodeFrameOptions, EncoderOptions } from './options'
 
 export function createEncoder(options: EncoderOptions) {
@@ -13,14 +17,19 @@ export function createEncoder(options: EncoderOptions) {
     workerUrl,
     workerNumber = 1,
     colorTableSize = 256,
-    maxColors = colorTableSize - 1,
     backgroundColorIndex = colorTableSize - 1,
+    debug = false,
+  } = options
+
+  let {
+    maxColors = colorTableSize - 1,
   } = options
 
   let frames: EncodeFrameOptions[] = []
 
   const transparentIndex = backgroundColorIndex
-  const palette = createPalette({ maxColors })
+  const log = createLogger(debug)
+  const palette = createPalette()
   const workersLength = workerUrl ? workerNumber : 0
   const workersCallbacks = new Map<number, any>()
   const workers = [...new Array(workersLength)].map(() => {
@@ -34,107 +43,159 @@ export function createEncoder(options: EncoderOptions) {
   })
 
   let i = 0
-  function execInWorker(message: any, transfer: Transferable[]) {
+  function execInWorker(message: any, transfer?: Transferable[], index?: number) {
     if (!workersLength) return undefined
     return new Promise(resolve => {
       const uuid = i++
       message.uuid = uuid
       workersCallbacks.set(uuid, resolve)
-      workers[uuid % workersLength].postMessage(message, transfer)
+      const worker = workers[index ?? (uuid % workersLength)]
+      if (transfer) {
+        worker.postMessage(message, transfer)
+      } else {
+        worker.postMessage(message)
+      }
     })
   }
 
-  async function encodeFrameInWorker(
-    frame: EncodeFrameOptions,
-    indexes: Uint8Array,
-  ): Promise<ReturnType<typeof encodeFrame>> {
+  async function addSampleInWorker(
+    options: Uint8ClampedArray,
+  ): Promise<void> {
     const result = await execInWorker(
-      { type: 'encode-frame', frame, indexes },
-      [frame.imageData.buffer, indexes.buffer],
+      { type: 'palette:addSample', options },
+      [options.buffer],
+      0,
+    )
+    if (result) return
+    palette.addSample(options)
+  }
+
+  async function generateInWorker(): Promise<Context> {
+    const result = await execInWorker(
+      { type: 'palette:generate', options: { maxColors } },
+      undefined,
+      0,
     )
     if (result) return result as any
-    return encodeFrame(frame, indexes)
+    palette.generate({ maxColors })
+    return palette.context
+  }
+
+  async function indexFramesInWorker(
+    options: IndexFramesOptions,
+  ): Promise<ReturnType<typeof indexFrames>> {
+    const result = await execInWorker(
+      { type: 'frames:index', options },
+      options.frames.map(val => val.imageData.buffer),
+    )
+    if (result) return result as any
+    return indexFrames(options)
+  }
+
+  async function cropFramesInWorker(
+    options: CropFramesOptions,
+  ): Promise<ReturnType<typeof cropFrames>> {
+    const result = await execInWorker(
+      { type: 'frames:crop', options },
+      options.frames.map(val => val.imageData.buffer),
+    )
+    if (result) return result as any
+    return cropFrames(options)
+  }
+
+  async function encodeFrameInWorker(
+    options: EncodeFrameOptions,
+  ): Promise<ReturnType<typeof encodeFrame>> {
+    const result = await execInWorker(
+      { type: 'frame:encode', options },
+      [options.imageData.buffer],
+    )
+    if (result) return result as any
+    return encodeFrame(options)
   }
 
   return {
-    encode: (frame: EncodeFrameOptions): void => {
-      frames.push({ width, height, ...frame })
-      palette.addSample(frame.imageData)
+    setMaxColors(value: number): void {
+      maxColors = value
     },
-    flush: (): Promise<Uint8Array> => {
-      return new Promise((resolve) => {
-        const colorTable = palette
-          .generate()
-          .getColors('rgb')
-          .map(val => val.color)
+    async encode(frame: EncodeFrameOptions): Promise<void> {
+      const index = frames.length
+      if (index === 0) {
+        await execInWorker({ type: 'palette:init' }, undefined, 0)
+      }
+      log.time(`palette:sample-${ index }`)
+      frames.push({ width, height, ...frame })
+      await addSampleInWorker(frame.imageData.slice(0))
+      log.timeEnd(`palette:sample-${ index }`)
+    },
+    async flush(): Promise<Uint8Array> {
+      log.time('palette:generate')
+      const context = await generateInWorker()
+      const colorTable = createPalette(context)
+        .getColors('rgb')
+        .map(val => val.color)
+      while (colorTable.length < colorTableSize) {
+        colorTable.push([0, 0, 0])
+      }
+      log.timeEnd('palette:generate')
 
-        while (colorTable.length < colorTableSize) {
-          colorTable.push([0, 0, 0])
-        }
-
-        const encodedHeader = encodeHeader({
-          colorTable,
-          backgroundColorIndex,
-          ...options,
-        })
-
-        const { allIndexes, transparents } = convertFramesToIndexes(
-          frames,
-          palette,
-          transparentIndex,
-        )
-
-        const { boxes, allIndexes: croppedAllIndexes } = croppingFrames(
-          frames,
-          allIndexes,
-          transparents,
-          transparentIndex,
-        )
-
-        Promise.all(frames.map((frame, index) => {
-          const box = boxes[index]
-          return encodeFrameInWorker(
-            {
-              ...frame,
-              left: box.left,
-              top: box.top,
-              width: box.width,
-              height: box.height,
-              disposal: box.disposal,
-              graphicControl: {
-                ...frame.graphicControl,
-                transparent: true,
-                transparentIndex: backgroundColorIndex,
-              } as any,
-            },
-            croppedAllIndexes[index],
-          )
-        })).then(encodedFrames => {
-          const encodedBody = new Uint8Array(
-            encodedFrames.reduce((total, frameData) => total + frameData.byteLength, 0),
-          )
-
-          let offset = 0
-          encodedFrames.forEach((encoded) => {
-            encodedBody.set(encoded, offset)
-            offset += encoded.length
-          })
-
-          const data = new Uint8Array(
-            encodedHeader.length + encodedBody.byteLength + 1,
-          )
-          data.set(encodedHeader)
-          data.set(encodedBody, encodedHeader.byteLength)
-          data[data.length - 1] = TRAILER
-
-          resolve(data)
-
-          // reset
-          palette.reset()
-          frames = []
-          workersCallbacks.clear()
-        })
+      log.time('frames:index')
+      const indexedFrames = await indexFramesInWorker({
+        frames: frames.map(frame => ({ imageData: frame.imageData.slice(0) })),
+        palette: context,
+        transparentIndex,
       })
+      log.timeEnd('frames:index')
+
+      log.time('frames:crop')
+      const croppedFrames = await cropFramesInWorker({
+        frames: indexedFrames.map((indexedFrame, index) => {
+          const { width = 1, height = 1 } = frames[index]
+          return {
+            ...indexedFrame,
+            width,
+            height,
+          }
+        }),
+        transparentIndex,
+      })
+      log.timeEnd('frames:crop')
+
+      log.time('frames:encode')
+      const encodedFrames = await Promise.all(frames.map((frame, index) => {
+        return encodeFrameInWorker(
+          {
+            ...frame,
+            ...croppedFrames[index],
+            graphicControl: {
+              ...frame.graphicControl,
+              transparent: true,
+              transparentIndex: backgroundColorIndex,
+            } as any,
+          },
+        )
+      }))
+      log.timeEnd('frames:encode')
+
+      log.time('output')
+      const header = encodeHeader({
+        colorTable,
+        backgroundColorIndex,
+        ...options,
+      })
+      const body = mergeUint8Array(...encodedFrames)
+      const output = new Uint8Array(header.length + body.byteLength + 1)
+      output.set(header)
+      output.set(body, header.byteLength)
+      output[output.length - 1] = TRAILER
+      log.timeEnd('output')
+
+      // reset
+      palette.reset()
+      frames = []
+      workersCallbacks.clear()
+
+      return output
     },
   }
 }

@@ -9,6 +9,11 @@ export type EncodeFrameOptions = Partial<Frame> & {
 
 export type EncoderOptions = Omit<Partial<Gif>, 'frames'> & {
   /**
+   * Enable debug mode to view the execution time log.
+   */
+  debug?: boolean
+
+  /**
    * Worker script url
    */
   workerUrl?: string

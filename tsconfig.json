@@ -32,7 +32,11 @@
 
     /* 实验选项 */
     "experimentalDecorators": true, /* 启用对 ES7 装饰器的实验性支持。 */
-    "emitDecoratorMetadata": true /* 为 decorator 的发射类型元数据提供实验性支持。 */
+    "emitDecoratorMetadata": true, /* 为 decorator 的发射类型元数据提供实验性支持。 */
+
+    "types": [
+      "vite/client"
+    ]
   },
   "exclude": [
     "**/dist/**",

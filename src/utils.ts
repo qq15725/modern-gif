@@ -17,14 +17,18 @@ export const TRAILER = 0x3B
 
 // Console
 export const consoleWarn = (...args: any[]) => console.warn(PREFIX, ...args)
+// eslint-disable-next-line no-console
+export const consoleTime = (label: string) => console.time(`${ PREFIX } ${ label }`)
+// eslint-disable-next-line no-console
+export const consoleTimeEnd = (label: string) => console.timeEnd(`${ PREFIX } ${ label }`)
 
-export function mergeUint8Array(...uint8Arrays: Uint8Array[]): Uint8Array {
+export function mergeUint8Array(...arrays: Uint8Array[]): Uint8Array {
   const container = new Uint8Array(
-    uint8Arrays.reduce((total, uint8Array) => total + uint8Array.byteLength, 0),
+    arrays.reduce((total, array) => total + array.byteLength, 0),
   )
-  uint8Arrays.reduce((offset, uint8Array) => {
-    container.set(uint8Array, offset)
-    return offset + uint8Array.byteLength
+  arrays.reduce((offset, array) => {
+    container.set(array, offset)
+    return offset + array.byteLength
   }, 0)
   return container
 }

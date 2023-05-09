@@ -13,7 +13,7 @@
   <a href="https://github.com/qq15725/modern-gif/issues">
     <img src="https://img.shields.io/github/issues/qq15725/modern-gif" alt="Issues">
   </a>
-  <a href="https://github.com/qq15725/modern-gif/blob/master/LICENSE">
+  <a href="https://github.com/qq15725/modern-gif/blob/main/LICENSE">
     <img src="https://img.shields.io/npm/l/modern-gif.svg" alt="License">
   </a>
 </p>

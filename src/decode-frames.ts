@@ -8,7 +8,7 @@ export interface DecodedFrame {
   width: number
   height: number
   delay: number
-  data: Uint8ClampedArray
+  imageData: Uint8ClampedArray
 }
 
 export interface DecodeFramesOptions {
@@ -20,7 +20,7 @@ export function decodeFrames(
   source: BufferSource,
   options: DecodeFramesOptions = {},
 ): DecodedFrame[] {
-  const uint8Array = resovleUint8Array(source)
+  const array = resovleUint8Array(source)
 
   const {
     gif = decode(source),
@@ -69,7 +69,7 @@ export function decodeFrames(
 
     const compressedData = mergeUint8Array(
       ...imageDataPositions.map(
-        ([begin, length]) => uint8Array.subarray(begin, begin + length),
+        ([begin, length]) => array.subarray(begin, begin + length),
       ),
     )
 
@@ -112,7 +112,7 @@ export function decodeFrames(
       width: globalWidth,
       height: globalHeight,
       delay,
-      data: pixels.slice(0),
+      imageData: pixels.slice(0),
     }
   })
 }
@@ -122,10 +122,10 @@ export function decodeFramesInWorker(source: BufferSource, workerUrl: string): P
     const gif = resovleUint8Array(source)
     const worker = new Worker(workerUrl)
     worker.onmessage = event => {
-      const { uuid, frames } = event.data
-      if (uuid !== 'decode-frames') return
-      resolve(frames)
+      const { uuid, data } = event.data
+      if (uuid !== 'frames:decode') return
+      resolve(data)
     }
-    worker.postMessage({ type: 'decode-frames', uuid: 'decode-frames', gif }, [gif.buffer])
+    worker.postMessage({ type: 'frames:decode', uuid: 'frames:decode', source: gif }, [gif.buffer])
   })
 }

@@ -4,7 +4,7 @@ import { mergeUint8Array, resovleUint8Array } from './utils'
 import type { Gif } from './gif'
 
 export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: number): Uint8ClampedArray {
-  const uint8Array = resovleUint8Array(source)
+  const array = resovleUint8Array(source)
 
   const {
     frames,
@@ -38,7 +38,7 @@ export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: num
 
   const compressedData = mergeUint8Array(
     ...imageDataPositions.map(
-      ([begin, length]) => uint8Array.subarray(begin, begin + length),
+      ([begin, length]) => array.subarray(begin, begin + length),
     ),
   )
 

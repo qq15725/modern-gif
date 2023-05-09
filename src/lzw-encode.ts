@@ -1,6 +1,6 @@
 import type { createWriter } from './create-writer'
 
-export function lzwEncode(minCodeSize: number, data: Uint8Array, writer: ReturnType<typeof createWriter>) {
+export function lzwEncode(minCodeSize: number, data: Uint8ClampedArray, writer: ReturnType<typeof createWriter>) {
   const { writeByte, getCursor, calculateDistance } = writer
 
   writeByte(minCodeSize)

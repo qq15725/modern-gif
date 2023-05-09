@@ -1,29 +1,40 @@
-import type { EncodeFrameOptions } from './options'
+export interface CropFramesOptions {
+  frames: {
+    width: number
+    height: number
+    imageData: Uint8ClampedArray
+    transparent: boolean
+  }[]
+  transparentIndex: number
+}
 
-export function croppingFrames(
-  frames: EncodeFrameOptions[],
-  allIndexes: Uint8Array[],
-  transparents: boolean[],
-  transparentIndex: number,
-) {
-  let lastIndexes: Uint8Array | undefined
+export function cropFrames(options: CropFramesOptions) {
+  const { frames, transparentIndex } = options
+
+  let lastIndexPixels: Uint8ClampedArray | undefined
+
   const framesLength = frames.length
-  const boxes = frames.map((frame, index) => {
-    const { width = 1, height = 1 } = frame
-    const indexes = allIndexes[index]
-    const isTranslucent = transparents[index]
+  return frames.map((frame, index) => {
+    const {
+      width,
+      height,
+      transparent,
+      imageData: indexPixels,
+    } = frame
+
     let left = 0
     let top = 0
     let right = width - 1
     let bottom = height - 1
 
-    let prevIndexes: Uint8Array | undefined
-    if (isTranslucent) {
+    let prevIndexPixels: Uint8ClampedArray | undefined
+
+    if (transparent) {
       // crop top
       while (top < bottom) {
         let isTrans = true
         for (let x = 0; x < width; x++) {
-          if (indexes[width * top + x] !== transparentIndex) {
+          if (indexPixels[width * top + x] !== transparentIndex) {
             isTrans = false
             break
           }
@@ -36,7 +47,7 @@ export function croppingFrames(
       while (bottom > top) {
         let isTrans = true
         for (let x = 0; x < width; x++) {
-          if (indexes[width * bottom + x] !== transparentIndex) {
+          if (indexPixels[width * bottom + x] !== transparentIndex) {
             isTrans = false
             break
           }
@@ -49,7 +60,7 @@ export function croppingFrames(
       while (left < right) {
         let isTrans = true
         for (let y = top; y < bottom; y++) {
-          if (indexes[width * y + left] !== transparentIndex) {
+          if (indexPixels[width * y + left] !== transparentIndex) {
             isTrans = false
             break
           }
@@ -62,7 +73,7 @@ export function croppingFrames(
       while (right > left) {
         let isTrans = true
         for (let y = top; y < bottom; y++) {
-          if (indexes[width * y + right] !== transparentIndex) {
+          if (indexPixels[width * y + right] !== transparentIndex) {
             isTrans = false
             break
           }
@@ -71,13 +82,13 @@ export function croppingFrames(
         right--
       }
     } else {
-      if (lastIndexes) {
+      if (lastIndexPixels) {
         // skip common lines
         while (top < bottom) {
           let sameLine = true
           for (let x = 0; x < width; x++) {
             const index = width * top + x
-            if (indexes[index] !== lastIndexes[index]) {
+            if (indexPixels[index] !== lastIndexPixels[index]) {
               sameLine = false
               break
             }
@@ -89,7 +100,7 @@ export function croppingFrames(
           let sameLine = true
           for (let x = 0; x < width; x++) {
             const index = width * bottom + x
-            if (indexes[index] !== lastIndexes[index]) {
+            if (indexPixels[index] !== lastIndexPixels[index]) {
               sameLine = false
               break
             }
@@ -106,7 +117,7 @@ export function croppingFrames(
             let sameColumn = true
             for (let y = top; y <= bottom; y++) {
               const index = y * width + left
-              if (indexes[index] !== lastIndexes[index]) {
+              if (indexPixels[index] !== lastIndexPixels[index]) {
                 sameColumn = false
                 break
               }
@@ -118,7 +129,7 @@ export function croppingFrames(
             let sameColumn = true
             for (let y = top; y <= bottom; y++) {
               const index = y * width + right
-              if (indexes[index] !== lastIndexes[index]) {
+              if (indexPixels[index] !== lastIndexPixels[index]) {
                 sameColumn = false
                 break
               }
@@ -128,42 +139,32 @@ export function croppingFrames(
           }
         }
       }
-      prevIndexes = lastIndexes
-      lastIndexes = indexes
+      prevIndexPixels = lastIndexPixels
+      lastIndexPixels = indexPixels
+    }
+
+    const newWidth = right + 1 - left
+    const newHeight = bottom + 1 - top
+    const croppedIndexPixels = new Uint8ClampedArray(newWidth * newHeight)
+    for (let y = 0; y < newHeight; y++) {
+      for (let x = 0; x < newWidth; x++) {
+        const index = y * newWidth + x
+        const rawIndex = (top + y) * width + (left + x)
+        if (!transparent && prevIndexPixels && indexPixels[rawIndex] === prevIndexPixels[rawIndex]) {
+          croppedIndexPixels[index] = transparentIndex
+          continue
+        }
+        croppedIndexPixels[index] = indexPixels[rawIndex]
+      }
     }
 
     return {
       left,
-      right,
       top,
-      bottom,
-      isTranslucent,
-      prevIndexes,
-      disposal: (isTranslucent && index !== framesLength - 1 ? 2 : 1) as 2 | 1,
-      width: right + 1 - left,
-      height: bottom + 1 - top,
+      width: newWidth,
+      height: newHeight,
+      disposal: (transparent && index !== framesLength - 1 ? 2 : 1) as 2 | 1,
+      imageData: croppedIndexPixels,
     }
   })
-
-  return {
-    boxes,
-    allIndexes: frames.map((frame, index) => {
-      const { width: rawWidth = 1 } = frame
-      const indexes = allIndexes[index]
-      const { top, left, width, height, isTranslucent, prevIndexes } = boxes[index]
-      const croppedIndexes = new Uint8Array(width * height)
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const index = y * width + x
-          const rawIndex = (top + y) * rawWidth + (left + x)
-          if (!isTranslucent && prevIndexes && indexes[rawIndex] === prevIndexes[rawIndex]) {
-            croppedIndexes[index] = transparentIndex
-            continue
-          }
-          croppedIndexes[index] = indexes[rawIndex]
-        }
-      }
-      return croppedIndexes
-    }),
-  }
 }

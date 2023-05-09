@@ -2,8 +2,8 @@ lockfileVersion: '6.0'
 
 dependencies:
   modern-palette:
-    specifier: ^0.1.4
-    version: 0.1.4
+    specifier: ^0.1.8
+    version: 0.1.8
 
 devDependencies:
   '@qq15725/eslint-config':
@@ -2642,8 +2642,8 @@ packages:
       ufo: 1.1.2
     dev: true
 
-  /modern-palette@0.1.4:
-    resolution: {integrity: sha512-83vCJAzW/DUvpSEbgA+nl+T0Gb+HNn+gMlTP2kRN9rZbBvk3+FCw48cAbd8SIiMd1tvVtBo+bPENFST1N8YIQA==}
+  /modern-palette@0.1.8:
+    resolution: {integrity: sha512-kCPy5P2nABa+suI34uWyh87PQzhaFmZ5igEEoPowXoCxOpgF6UW8Bj4pdvf+NRFnhMC3Tok6a36bgd/4oT8SRA==}
     dev: false
 
   /modify-values@1.0.1:

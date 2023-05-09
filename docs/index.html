@@ -30,6 +30,7 @@
       margin-top: 10px;
       font-family: Menlo, monospace;
       font-size: 18px;
+      min-height: 200px;
     }
   </style>
 </head>
@@ -56,7 +57,7 @@
           <input type="range" step="1" min="0" max="1000" value="100" data-name="delay" data-unit="ms">
           <span class="value">100ms</span>
         </p>
-        <pre>Loading...</pre>
+        <pre></pre>
       </div>
     </div>
   </main>
@@ -78,36 +79,35 @@
       delay: 100,
     }
 
-    // Decode GIF and GIF frames and create encoder
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
       rawSize = source.byteLength / 1024
       gif = decode(source)
       frames = await decodeFramesInWorker(source, workerUrl)
-      render()
-    }
-
-    function initEncoder() {
       encoder = createEncoder({
+        debug: true,
         workerUrl,
         workerNumber: 4,
         width: gif.width,
         height: gif.height,
         maxColors: props.maxColors,
       })
+      render()
     }
 
     async function render() {
-      pre.textContent = 'Loading...'
+      if (pre.textContent.startsWith('Encoding')) return
 
-      initEncoder()
+      pre.textContent = 'Encoding...'
 
-      frames.forEach(frame => {
-        encoder.encode({
-          imageData: frame.data.slice(0),
+      encoder.setMaxColors(props.maxColors)
+
+      for (let len = frames.length, i = 0; i < len; i++) {
+        await encoder.encode({
+          imageData: frames[i].imageData,
           delay: props.delay,
         })
-      })
+      }
 
       const start = Date.now()
       const output = await encoder.flush()
@@ -115,12 +115,13 @@
 
       const blob = new Blob([output], { type: 'image/gif' })
       size = output.byteLength / 1024
-      if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src)
+      const rawSrc = img.src
       img.src = URL.createObjectURL(blob)
+      if (rawSrc.startsWith('blob:')) URL.revokeObjectURL(rawSrc)
 
       pre.textContent = `Rendered ${ frames.length } frame(s) at ${ props.maxColors } max colors in ${ time }ms
-Raw GIF size: ${ rawSize }kb
-Output GIF size: ${ size }kb`
+Input  size: ${ rawSize }kb
+Output size: ${ size }kb`
     }
 
     Array.from(document.querySelectorAll('input')).forEach(input => {
