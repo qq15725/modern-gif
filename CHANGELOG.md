@@ -1,3 +1,12 @@
+## [1.0.1](https://github.com/qq15725/modern-gif/compare/v1.0.0...v1.0.1) (2023-05-09)
+
+
+### Bug Fixes
+
+* worker ([fae8d58](https://github.com/qq15725/modern-gif/commit/fae8d58873d20c2c1097d4ec28abe4ec7c3d65f5))
+
+
+
 # [1.0.0](https://github.com/qq15725/modern-gif/compare/v0.1.1...v1.0.0) (2023-05-08)
 
 
