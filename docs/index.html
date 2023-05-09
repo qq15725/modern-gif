@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>modern-gif</title>
+  <meta name="description" content="Fastest GIF decoder / encoder. using TypeScript.">
+  <meta name="keywords" content="gif, encoder, decode, animation, browser">
+  <meta name="viewport" content="width=device-width">
+  <meta property="og:title" content="modern-gif">
+  <meta property="og:url" content="https://github.com/qq15725/modern-gif">
+  <meta property="og:description" content="Fastest GIF decoder / encoder. using TypeScript.">
+  <meta property="og:type" content="website">
+  <style>
+    body {
+      background-color: #EEE;
+    }
+
+    header, footer, main {
+      width: 600px;
+      margin: 0 auto;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+    }
+
+    pre {
+      margin-top: 10px;
+      font-family: Menlo, monospace;
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>modern-gif</h1>
+    <p>🎨 Fastest GIF decoder / encoder. using TypeScript.</p>
+    <a href="https://github.com/qq15725/modern-gif" target="_blank">Download on GitHub</a>
+  </header>
+
+  <main>
+    <h2>Demo</h2>
+    <div>
+      <img class="example" src="/example.gif" />
+      <div>
+        <p>
+          <label>MaxColors</label>
+          <input type="range" step="1" min="2" max="256" value="10" data-name="maxColors">
+          <span class="value">10</span>
+        </p>
+        <p>
+          <label>Delay</label>
+          <input type="range" step="1" min="0" max="1000" value="100" data-name="delay" data-unit="ms">
+          <span class="value">100ms</span>
+        </p>
+        <pre>Loading...</pre>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import workerUrl from '../dist/worker?url'
+    import { createEncoder, decode, decodeFramesInWorker } from '../src'
+
+    const img = document.querySelector('.example')
+    const pre = document.querySelector('pre')
+
+    let gif = null
+    let frames = null
+    let encoder = null
+    let rawSize = null
+    let size = null
+    const props = {
+      maxColors: 10,
+      delay: 100,
+    }
+
+    // Decode GIF and GIF frames and create encoder
+    async function init() {
+      const source = await fetch(img.src).then(res => res.arrayBuffer())
+      rawSize = source.byteLength / 1024
+      gif = decode(source)
+      frames = await decodeFramesInWorker(source, workerUrl)
+      render()
+    }
+
+    function initEncoder() {
+      encoder = createEncoder({
+        workerUrl,
+        workerNumber: 4,
+        width: gif.width,
+        height: gif.height,
+        maxColors: props.maxColors,
+      })
+    }
+
+    async function render() {
+      pre.textContent = 'Loading...'
+
+      initEncoder()
+
+      frames.forEach(frame => {
+        encoder.encode({
+          imageData: frame.data.slice(0),
+          delay: props.delay,
+        })
+      })
+
+      const start = Date.now()
+      const output = await encoder.flush()
+      const time = Date.now() - start
+
+      const blob = new Blob([output], { type: 'image/gif' })
+      size = output.byteLength / 1024
+      if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src)
+      img.src = URL.createObjectURL(blob)
+
+      pre.textContent = `Rendered ${ frames.length } frame(s) at ${ props.maxColors } max colors in ${ time }ms
+Raw GIF size: ${ rawSize }kb
+Output GIF size: ${ size }kb`
+    }
+
+    Array.from(document.querySelectorAll('input')).forEach(input => {
+      const valueEl = input.parentElement.querySelector('.value')
+      const { unit = '', name } = input.dataset
+      input.addEventListener('input', () => {
+        const { value } = input
+        valueEl.textContent = value + unit
+        props[name] = Number(value)
+        setTimeout(render, 0)
+      })
+    })
+
+    init()
+  </script>
+</body>
+</html>

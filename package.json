@@ -50,11 +50,12 @@
     "types"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite docs",
     "lint": "eslint src",
     "test": "vitest --no-threads --no-isolate",
     "build:worker": "vite build --config vite.worker.config.ts",
     "build": "vite build && pnpm build:worker && tsc --project tsconfig.build.json",
+    "build:docs": "vite build docs",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
   },
@@ -66,8 +67,8 @@
     "conventional-changelog-cli": "^2.2.2",
     "eslint": "^8.34.0",
     "typescript": "^4.9.5",
-    "vite": "^4.1.2",
-    "vitest": "^0.28.5"
+    "vite": "^4.3.5",
+    "vitest": "^0.31.0"
   },
   "dependencies": {
     "modern-palette": "^0.1.4"
