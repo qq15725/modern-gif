@@ -1,3 +1,12 @@
+## [1.0.4](https://github.com/qq15725/modern-gif/compare/v1.0.3...v1.0.4) (2023-05-10)
+
+
+### Features
+
+* optimize encoder ([03a80e2](https://github.com/qq15725/modern-gif/commit/03a80e2092eab409d6abf3c1394a0269d73e94f7))
+
+
+
 ## [1.0.3](https://github.com/qq15725/modern-gif/compare/v1.0.2...v1.0.3) (2023-05-10)
 
 
