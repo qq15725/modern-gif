@@ -1,7 +1,7 @@
-import { resovleDataView } from './utils'
+import { resovleSource } from './utils'
 
 export function createReader(data: BufferSource) {
-  const view = resovleDataView(data)
+  const view = resovleSource(data, 'dataView')
 
   let cursor = 0
 

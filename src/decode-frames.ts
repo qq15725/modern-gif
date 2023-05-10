@@ -1,5 +1,5 @@
 import { decode } from './decode'
-import { mergeUint8Array, resovleUint8Array } from './utils'
+import { mergeBuffers, resovleSource } from './utils'
 import { lzwDecode } from './lzw-decode'
 import { deinterlace } from './deinterlace'
 import { createWorker } from './create-worker'
@@ -21,7 +21,7 @@ export function decodeFrames(
   source: BufferSource,
   options: DecodeFramesOptions = {},
 ): DecodedFrame[] {
-  const array = resovleUint8Array(source)
+  const array = resovleSource(source, 'uint8Array')
 
   const {
     gif = decode(source),
@@ -68,8 +68,8 @@ export function decodeFrames(
     const palette = localColorTable ? colorTable : globalColorTable
     const transparentIndex = transparent ? transparentIndex_ : -1
 
-    const compressedData = mergeUint8Array(
-      ...imageDataPositions.map(
+    const compressedData = mergeBuffers(
+      imageDataPositions.map(
         ([begin, length]) => array.subarray(begin, begin + length),
       ),
     )
@@ -119,7 +119,7 @@ export function decodeFrames(
 }
 
 export async function decodeFramesInWorker(source: BufferSource, workerUrl: string): Promise<DecodedFrame[]> {
-  const gif = resovleUint8Array(source)
+  const gif = resovleSource(source, 'uint8Array')
   const worker = createWorker({ workerUrl })
   return await worker.call(
     { type: 'frames:decode', source: gif },

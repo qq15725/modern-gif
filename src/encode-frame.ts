@@ -3,7 +3,7 @@ import { lzwEncode } from './lzw-encode'
 import { createWriter } from './create-writer'
 import type { EncodeFrameOptions } from './options'
 
-export function encodeFrame(frame: EncodeFrameOptions): Uint8Array {
+export function encodeFrame(frame: EncodeFrameOptions<Uint8ClampedArray>): Uint8Array {
   const writer = createWriter()
 
   const {

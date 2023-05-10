@@ -1,3 +1,5 @@
+import { cropBuffer } from './utils'
+
 export interface CropFramesOptions {
   frames: {
     width: number
@@ -145,18 +147,24 @@ export function cropFrames(options: CropFramesOptions) {
 
     const newWidth = right + 1 - left
     const newHeight = bottom + 1 - top
-    const croppedIndexPixels = new Uint8ClampedArray(newWidth * newHeight)
-    for (let y = 0; y < newHeight; y++) {
-      for (let x = 0; x < newWidth; x++) {
-        const index = y * newWidth + x
-        const rawIndex = (top + y) * width + (left + x)
-        if (!transparent && prevIndexPixels && indexPixels[rawIndex] === prevIndexPixels[rawIndex]) {
-          croppedIndexPixels[index] = transparentIndex
-          continue
-        }
-        croppedIndexPixels[index] = indexPixels[rawIndex]
-      }
-    }
+
+    const croppedIndexPixels = cropBuffer(
+      indexPixels,
+      {
+        left,
+        top,
+        width: newWidth,
+        height: newHeight,
+        rawWidth: width,
+        rate: 1,
+        callback: rawIndex => {
+          if (!transparent && prevIndexPixels && indexPixels[rawIndex] === prevIndexPixels[rawIndex]) {
+            return transparentIndex
+          }
+          return undefined
+        },
+      },
+    )
 
     return {
       left,

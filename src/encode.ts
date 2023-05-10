@@ -1,18 +1,14 @@
 import { createEncoder } from './create-encoder'
 import type { EncodeOptions } from './options'
 
-export function encode(options: EncodeOptions): Promise<Uint8Array> {
+export async function encode(options: EncodeOptions): Promise<Uint8Array> {
+  const { frames } = options
+
   const encoder = createEncoder(options)
 
-  const { width, height, frames } = options
+  for (let len = frames.length, i = 0; i < len; i++) {
+    await encoder.encode(frames[i])
+  }
 
-  frames.forEach(frameOptions => {
-    encoder.encode({
-      width,
-      height,
-      ...frameOptions,
-    })
-  })
-
-  return encoder.flush()
+  return await encoder.flush()
 }

@@ -1,5 +1,5 @@
 import { createPalette } from 'modern-palette'
-import { TRAILER, mergeUint8Array } from './utils'
+import { TRAILER, cropBuffer, loadImage, mergeBuffers, resovleSource, resovleSourceBox } from './utils'
 import { encodeHeader } from './encode-header'
 import { encodeFrame } from './encode-frame'
 import { indexFrames } from './index-frames'
@@ -26,7 +26,7 @@ export function createEncoder(options: EncoderOptions) {
     maxColors = colorTableSize - 1,
   } = options
 
-  let frames: EncodeFrameOptions[] = []
+  let frames: EncodeFrameOptions<Uint8ClampedArray>[] = []
 
   const transparentIndex = backgroundColorIndex
   const log = createLogger(debug)
@@ -37,12 +37,10 @@ export function createEncoder(options: EncoderOptions) {
     workerNumber,
   })
 
-  async function addSampleInWorker(
-    options: Uint8ClampedArray,
-  ): Promise<void> {
+  async function addSampleInWorker(options: Uint8ClampedArray): Promise<void> {
     const result = await worker.call(
       { type: 'palette:addSample', options },
-      [options.buffer],
+      undefined,
       0,
     )
     if (result) return
@@ -60,20 +58,15 @@ export function createEncoder(options: EncoderOptions) {
     return palette.context
   }
 
-  async function indexFramesInWorker(
-    options: IndexFramesOptions,
-  ): Promise<ReturnType<typeof indexFrames>> {
+  async function indexFramesInWorker(options: IndexFramesOptions): Promise<ReturnType<typeof indexFrames>> {
     const result = await worker.call(
       { type: 'frames:index', options },
-      options.frames.map(val => val.imageData.buffer),
     )
     if (result) return result as any
     return indexFrames(options)
   }
 
-  async function cropFramesInWorker(
-    options: CropFramesOptions,
-  ): Promise<ReturnType<typeof cropFrames>> {
+  async function cropFramesInWorker(options: CropFramesOptions): Promise<ReturnType<typeof cropFrames>> {
     const result = await worker.call(
       { type: 'frames:crop', options },
       options.frames.map(val => val.imageData.buffer),
@@ -82,9 +75,7 @@ export function createEncoder(options: EncoderOptions) {
     return cropFrames(options)
   }
 
-  async function encodeFrameInWorker(
-    options: EncodeFrameOptions,
-  ): Promise<ReturnType<typeof encodeFrame>> {
+  async function encodeFrameInWorker(options: EncodeFrameOptions<Uint8ClampedArray>): Promise<ReturnType<typeof encodeFrame>> {
     const result = await worker.call(
       { type: 'frame:encode', options },
       [options.imageData.buffer],
@@ -97,14 +88,43 @@ export function createEncoder(options: EncoderOptions) {
     setMaxColors(value: number): void {
       maxColors = value
     },
-    async encode(frame: EncodeFrameOptions): Promise<void> {
+    async encode(options: EncodeFrameOptions): Promise<void> {
       const index = frames.length
-      if (index === 0) {
-        await worker.call({ type: 'palette:init' }, undefined, 0)
-      }
+      if (index === 0) await worker.call({ type: 'palette:init' }, undefined, 0)
+
+      const { width: frameWidth = width, height: frameHeight = height } = options
+      let { imageData: source } = options
+
       log.time(`palette:sample-${ index }`)
-      frames.push({ width, height, ...frame })
-      await addSampleInWorker(frame.imageData.slice(0))
+
+      source = typeof source === 'string'
+        ? await loadImage(source)
+        : source
+
+      const box = resovleSourceBox(source)
+
+      let imageData = resovleSource(source, 'uint8ClampedArray')
+
+      if (box && frameWidth && frameHeight) {
+        imageData = cropBuffer(
+          resovleSource(source, 'uint8ClampedArray'),
+          {
+            width: frameWidth,
+            height: frameHeight,
+            rawWidth: box.width,
+          },
+        )
+      }
+
+      frames.push({
+        width: frameWidth,
+        height: frameHeight,
+        ...options,
+        imageData,
+      })
+
+      await addSampleInWorker(imageData)
+
       log.timeEnd(`palette:sample-${ index }`)
     },
     async flush(): Promise<Uint8Array> {
@@ -120,7 +140,7 @@ export function createEncoder(options: EncoderOptions) {
 
       log.time('frames:index')
       const indexedFrames = await indexFramesInWorker({
-        frames: frames.map(frame => ({ imageData: frame.imageData.slice(0) })),
+        frames,
         palette: context,
         transparentIndex,
       })
@@ -162,7 +182,7 @@ export function createEncoder(options: EncoderOptions) {
         backgroundColorIndex,
         ...options,
       })
-      const body = mergeUint8Array(...encodedFrames)
+      const body = mergeBuffers(encodedFrames)
       const output = new Uint8Array(header.length + body.byteLength + 1)
       output.set(header)
       output.set(body, header.byteLength)

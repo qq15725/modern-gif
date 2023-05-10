@@ -1,10 +1,10 @@
 import { deinterlace } from './deinterlace'
 import { lzwDecode } from './lzw-decode'
-import { mergeUint8Array, resovleUint8Array } from './utils'
+import { mergeBuffers, resovleSource } from './utils'
 import type { Gif } from './gif'
 
 export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: number): Uint8ClampedArray {
-  const array = resovleUint8Array(source)
+  const array = resovleSource(source, 'uint8Array')
 
   const {
     frames,
@@ -36,8 +36,8 @@ export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: num
   const palette = localColorTable ? colorTable : globalColorTable
   const transparentIndex = transparent ? transparentIndex_ : -1
 
-  const compressedData = mergeUint8Array(
-    ...imageDataPositions.map(
+  const compressedData = mergeBuffers(
+    imageDataPositions.map(
       ([begin, length]) => array.subarray(begin, begin + length),
     ),
   )
