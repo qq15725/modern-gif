@@ -62,7 +62,8 @@ import { decode, decodeFramesInWorker } from 'modern-gif'
 // import the `workerUrl` through `Vite`
 import workerUrl from 'modern-gif/worker?url'
 
-const buffer = await window.fetch('/test.gif').then(res => res.arrayBuffer())
+const buffer = await window.fetch('/test.gif')
+  .then(res => res.arrayBuffer())
 
 const gif = decode(buffer)
 console.log(gif)
