@@ -19,76 +19,21 @@ export function createEncoder(options: EncoderOptions) {
     workerNumber = 1,
     colorTableSize = 256,
     backgroundColorIndex = colorTableSize - 1,
+    maxColors = colorTableSize - 1,
     debug = false,
   } = options
 
-  let {
-    maxColors = colorTableSize - 1,
-  } = options
-
-  let frames: EncodeFrameOptions<Uint8ClampedArray>[] = []
-
-  const transparentIndex = backgroundColorIndex
-  const log = createLogger(debug)
-  const palette = createPalette()
-
-  const worker = createWorker({
-    workerUrl,
-    workerNumber,
-  })
-
-  async function addSampleInWorker(options: Uint8ClampedArray): Promise<void> {
-    const result = await worker.call(
-      { type: 'palette:addSample', options },
-      undefined,
-      0,
-    )
-    if (result) return
-    palette.addSample(options)
-  }
-
-  async function generateInWorker(): Promise<Context> {
-    const result = await worker.call(
-      { type: 'palette:generate', options: { maxColors } },
-      undefined,
-      0,
-    )
-    if (result) return result as any
-    palette.generate({ maxColors })
-    return palette.context
-  }
-
-  async function indexFramesInWorker(options: IndexFramesOptions): Promise<ReturnType<typeof indexFrames>> {
-    const result = await worker.call(
-      { type: 'frames:index', options },
-    )
-    if (result) return result as any
-    return indexFrames(options)
-  }
-
-  async function cropFramesInWorker(options: CropFramesOptions): Promise<ReturnType<typeof cropFrames>> {
-    const result = await worker.call(
-      { type: 'frames:crop', options },
-      options.frames.map(val => val.imageData.buffer),
-    )
-    if (result) return result as any
-    return cropFrames(options)
-  }
-
-  async function encodeFrameInWorker(options: EncodeFrameOptions<Uint8ClampedArray>): Promise<ReturnType<typeof encodeFrame>> {
-    const result = await worker.call(
-      { type: 'frame:encode', options },
-      [options.imageData.buffer],
-    )
-    if (result) return result as any
-    return encodeFrame(options)
-  }
-
-  return {
-    setMaxColors(value: number): void {
-      maxColors = value
-    },
+  const encoder = {
+    width,
+    height,
+    maxColors,
+    frames: [] as EncodeFrameOptions<Uint8ClampedArray>[],
+    log: createLogger(debug),
+    palette: createPalette(),
+    worker: createWorker({ workerUrl, workerNumber }),
     async encode(options: EncodeFrameOptions): Promise<void> {
+      const { log, frames, worker, width, height } = encoder
+
       const index = frames.length
       if (index === 0) await worker.call({ type: 'palette:init' }, undefined, 0)
 
@@ -105,7 +50,7 @@ export function createEncoder(options: EncoderOptions) {
 
       let imageData = resovleSource(source, 'uint8ClampedArray')
 
-      if (box && frameWidth && frameHeight) {
+      if (box && frameWidth && frameHeight && box.width > frameWidth && box.height > frameHeight) {
         imageData = cropBuffer(
           resovleSource(source, 'uint8ClampedArray'),
           {
@@ -128,6 +73,8 @@ export function createEncoder(options: EncoderOptions) {
       log.timeEnd(`palette:sample-${ index }`)
     },
     async flush(): Promise<Uint8Array> {
+      const { log, frames, width, height, palette } = encoder
+
       log.time('palette:generate')
       const context = await generateInWorker()
       const colorTable = createPalette(context)
@@ -142,7 +89,7 @@ export function createEncoder(options: EncoderOptions) {
       const indexedFrames = await indexFramesInWorker({
         frames,
         palette: context,
-        transparentIndex,
+        transparentIndex: backgroundColorIndex,
       })
       log.timeEnd('frames:index')
 
@@ -156,7 +103,7 @@ export function createEncoder(options: EncoderOptions) {
             height,
           }
         }),
-        transparentIndex,
+        transparentIndex: backgroundColorIndex,
       })
       log.timeEnd('frames:crop')
 
@@ -178,9 +125,11 @@ export function createEncoder(options: EncoderOptions) {
 
       log.time('output')
       const header = encodeHeader({
+        ...options,
         colorTable,
         backgroundColorIndex,
-        ...options,
+        width,
+        height,
       })
       const body = mergeBuffers(encodedFrames)
       const output = new Uint8Array(header.length + body.byteLength + 1)
@@ -191,9 +140,58 @@ export function createEncoder(options: EncoderOptions) {
 
       // reset
       palette.reset()
-      frames = []
+      encoder.frames = []
 
       return output
     },
   }
+
+  async function addSampleInWorker(options: Uint8ClampedArray): Promise<void> {
+    const result = await encoder.worker.call(
+      { type: 'palette:addSample', options },
+      undefined,
+      0,
+    )
+    if (result) return
+    encoder.palette.addSample(options)
+  }
+
+  async function generateInWorker(): Promise<Context> {
+    const result = await encoder.worker.call(
+      { type: 'palette:generate', options: { maxColors: encoder.maxColors } },
+      undefined,
+      0,
+    )
+    if (result) return result as any
+    encoder.palette.generate({ maxColors: encoder.maxColors })
+    return encoder.palette.context
+  }
+
+  async function indexFramesInWorker(options: IndexFramesOptions): Promise<ReturnType<typeof indexFrames>> {
+    const result = await encoder.worker.call(
+      { type: 'frames:index', options },
+    )
+    if (result) return result as any
+    return indexFrames(options)
+  }
+
+  async function cropFramesInWorker(options: CropFramesOptions): Promise<ReturnType<typeof cropFrames>> {
+    const result = await encoder.worker.call(
+      { type: 'frames:crop', options },
+      options.frames.map(val => val.imageData.buffer),
+    )
+    if (result) return result as any
+    return cropFrames(options)
+  }
+
+  async function encodeFrameInWorker(options: EncodeFrameOptions<Uint8ClampedArray>): Promise<ReturnType<typeof encodeFrame>> {
+    const result = await encoder.worker.call(
+      { type: 'frame:encode', options },
+      [options.imageData.buffer],
+    )
+    if (result) return result as any
+    return encodeFrame(options)
+  }
+
+  return encoder
 }

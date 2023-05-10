@@ -44,13 +44,17 @@
 
   <main>
     <h2>Demo</h2>
-    <div>
+    <div style="position: relative;">
+      <p>
+        <label>Select multiple images or GIFs</label>
+        <input type="file" multiple accept="image/png, image/jpeg, image/gif" />
+      </p>
       <img class="example" src="/example.gif" />
       <div>
         <p>
           <label>MaxColors</label>
-          <input type="range" step="1" min="2" max="255" value="10" data-name="maxColors">
-          <span class="value">10</span>
+          <input type="range" step="1" min="2" max="255" value="255" data-name="maxColors">
+          <span class="value">255</span>
         </p>
         <p>
           <label>Delay</label>
@@ -72,16 +76,14 @@
     let gif = null
     let frames = null
     let encoder = null
-    let rawSize = null
     let size = null
     const props = {
-      maxColors: 10,
+      maxColors: 255,
       delay: 100,
     }
 
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
-      rawSize = source.byteLength / 1024
       gif = decode(source)
       frames = await decodeFramesInWorker(source, workerUrl)
       encoder = createEncoder({
@@ -100,7 +102,7 @@
 
       pre.textContent = 'Encoding...'
 
-      encoder.setMaxColors(props.maxColors)
+      encoder.maxColors = props.maxColors
 
       for (let len = frames.length, i = 0; i < len; i++) {
         await encoder.encode({
@@ -120,18 +122,40 @@
       if (rawSrc.startsWith('blob:')) URL.revokeObjectURL(rawSrc)
 
       pre.textContent = `Rendered ${ frames.length } frame(s) at ${ props.maxColors } max colors in ${ time }ms
-Input  size: ${ rawSize }kb
-Output size: ${ size }kb`
+Output size: ${ ~~size }kb`
     }
 
     Array.from(document.querySelectorAll('input')).forEach(input => {
       const valueEl = input.parentElement.querySelector('.value')
       const { unit = '', name } = input.dataset
-      input.addEventListener('input', () => {
-        const { value } = input
-        valueEl.textContent = value + unit
-        props[name] = Number(value)
-        setTimeout(render, 0)
+      input.addEventListener('input', async () => {
+        if (input.type === 'file') {
+          frames.forEach(frame => {
+            if (typeof frame.imageData === 'string' && frame.imageData.startsWith('blob:')) {
+              URL.revokeObjectURL(frame.imageData)
+            }
+          })
+          frames = []
+          for (let len = input.files.length, i = 0; i < len; i++) {
+            const file = input.files[i]
+            if (file.type === 'image/gif') {
+              const buffer = await file.arrayBuffer()
+              const { width, height } = decode(buffer)
+              encoder.width = width
+              encoder.height = height
+              frames.push(...(await decodeFramesInWorker(buffer, workerUrl)))
+            } else {
+              const url = URL.createObjectURL(file)
+              frames.push({ imageData: url })
+            }
+          }
+          render()
+        } else {
+          const { value } = input
+          if (valueEl) valueEl.textContent = value + unit
+          props[name] = Number(value)
+          render()
+        }
       })
     })
 
