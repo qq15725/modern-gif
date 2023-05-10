@@ -62,25 +62,22 @@ import { decode, decodeFramesInWorker } from 'modern-gif'
 // import the `workerUrl` through `Vite`
 import workerUrl from 'modern-gif/worker?url'
 
-window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/assets/test.gif')
-  .then(res => res.arrayBuffer())
-  .then(buffer => {
-    const gif = decode(buffer)
+const buffer = await window.fetch('/test.gif').then(res => res.arrayBuffer())
 
-    console.log(gif)
+const gif = decode(buffer)
+console.log(gif)
 
-    decodeFramesInWorker(buffer, workerUrl).forEach(frame => {
-      const canvas = document.createElement('canvas')
-      const context2d = canvas.getContext('2d')
-      canvas.width = frame.width
-      canvas.height = frame.height
-      context2d.putImageData(
-        new ImageData(frame.imageData, frame.width, frame.height),
-        0, 0,
-      )
-      document.body.append(canvas)
-    })
-  })
+decodeFramesInWorker(buffer, workerUrl).forEach(frame => {
+  const canvas = document.createElement('canvas')
+  const context2d = canvas.getContext('2d')
+  canvas.width = frame.width
+  canvas.height = frame.height
+  context2d.putImageData(
+    new ImageData(frame.imageData, frame.width, frame.height),
+    0, 0,
+  )
+  document.body.append(canvas)
+})
 ```
 
 ## Types
