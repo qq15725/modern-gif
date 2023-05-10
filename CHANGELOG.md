@@ -1,3 +1,12 @@
+## [1.0.3](https://github.com/qq15725/modern-gif/compare/v1.0.2...v1.0.3) (2023-05-10)
+
+
+### Features
+
+* support more source type ([8dbabb2](https://github.com/qq15725/modern-gif/commit/8dbabb2866715ecdcd36235f155cfce94a542535))
+
+
+
 ## [1.0.2](https://github.com/qq15725/modern-gif/compare/v1.0.1...v1.0.2) (2023-05-09)
 
 
