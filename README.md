@@ -40,6 +40,7 @@ const output = await encode({
   height: 200,
   frames: [
     {
+      // supports CanvasImageSource | BufferSource | string
       imageData: '/example1.png',
       delay: 100,
     },
@@ -63,13 +64,12 @@ import workerUrl from 'modern-gif/worker?url'
 
 window.fetch('https://raw.githubusercontent.com/qq15725/modern-gif/master/test/assets/test.gif')
   .then(res => res.arrayBuffer())
-  .then(buffer => new Uint8Array(buffer))
-  .then(data => {
-    const gif = decode(data)
+  .then(buffer => {
+    const gif = decode(buffer)
 
     console.log(gif)
 
-    decodeFramesInWorker(data, workerUrl).forEach(frame => {
+    decodeFramesInWorker(buffer, workerUrl).forEach(frame => {
       const canvas = document.createElement('canvas')
       const context2d = canvas.getContext('2d')
       canvas.width = frame.width
