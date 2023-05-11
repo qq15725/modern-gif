@@ -40,7 +40,7 @@ const output = await encode({
   height: 200,
   frames: [
     {
-      // supports CanvasImageSource | BufferSource | string
+      // CanvasImageSource | BufferSource | string
       imageData: '/example1.png',
       delay: 100,
     },
