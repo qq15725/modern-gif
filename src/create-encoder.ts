@@ -73,10 +73,10 @@ export function createEncoder(options: EncoderOptions) {
       log.timeEnd(`palette:sample-${ index }`)
     },
     async flush(): Promise<Uint8Array> {
-      const { log, frames, width, height, palette } = encoder
+      const { log, frames, width, height, maxColors, palette } = encoder
 
       log.time('palette:generate')
-      const context = await generateInWorker()
+      const context = await generateInWorker(maxColors)
       const colorTable = createPalette(context)
         .getColors('rgb')
         .map(val => val.color)
@@ -84,6 +84,20 @@ export function createEncoder(options: EncoderOptions) {
         colorTable.push([0, 0, 0])
       }
       log.timeEnd('palette:generate')
+
+      // debug
+      log.debug('palette:maxColors', maxColors)
+      const hexColorTable = colorTable.map(rgb => {
+        const r = rgb[0].toString(16).padStart(2, '0')
+        const g = rgb[1].toString(16).padStart(2, '0')
+        const b = rgb[2].toString(16).padStart(2, '0')
+        return `#${ r }${ g }${ b }`
+      })
+      // eslint-disable-next-line no-console
+      debug && console.debug(
+        hexColorTable.map(() => '%c ').join(''),
+        ...hexColorTable.map(hex => `margin: 1px; background: ${ hex }`),
+      )
 
       log.time('frames:index')
       const indexedFrames = await indexFramesInWorker({
@@ -156,14 +170,14 @@ export function createEncoder(options: EncoderOptions) {
     encoder.palette.addSample(options)
   }
 
-  async function generateInWorker(): Promise<Context> {
+  async function generateInWorker(maxColors: number): Promise<Context> {
     const result = await encoder.worker.call(
-      { type: 'palette:generate', options: { maxColors: encoder.maxColors } },
+      { type: 'palette:generate', options: { maxColors } },
       undefined,
       0,
     )
     if (result) return result as any
-    encoder.palette.generate({ maxColors: encoder.maxColors })
+    encoder.palette.generate({ maxColors })
     return encoder.palette.context
   }
 

@@ -18,6 +18,8 @@ export const TRAILER = 0x3B
 // Console
 export const consoleWarn = (...args: any[]) => console.warn(PREFIX, ...args)
 // eslint-disable-next-line no-console
+export const consoleDebug = (...args: any[]) => console.debug(PREFIX, ...args)
+// eslint-disable-next-line no-console
 export const consoleTime = (label: string) => console.time(`${ PREFIX } ${ label }`)
 // eslint-disable-next-line no-console
 export const consoleTimeEnd = (label: string) => console.timeEnd(`${ PREFIX } ${ label }`)

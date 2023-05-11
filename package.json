@@ -71,6 +71,6 @@
     "vitest": "^0.31.0"
   },
   "dependencies": {
-    "modern-palette": "^0.1.8"
+    "modern-palette": "^0.2.0"
   }
 }
