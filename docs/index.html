@@ -73,27 +73,26 @@
     const img = document.querySelector('.example')
     const pre = document.querySelector('pre')
 
-    let gif = null
     let frames = null
-    let encoder = null
-    let size = null
     const props = {
       maxColors: 255,
       delay: 100,
     }
+    const encoder = createEncoder({
+      debug: true,
+      workerUrl,
+      workerNumber: 2,
+      width: 1,
+      height: 1,
+      maxColors: props.maxColors,
+    })
 
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
-      gif = decode(source)
+      const { width, height } = decode(source)
       frames = await decodeFramesInWorker(source, workerUrl)
-      encoder = createEncoder({
-        debug: true,
-        workerUrl,
-        workerNumber: 4,
-        width: gif.width,
-        height: gif.height,
-        maxColors: props.maxColors,
-      })
+      encoder.width = width
+      encoder.height = height
       render()
     }
 
@@ -116,13 +115,12 @@
       const time = Date.now() - start
 
       const blob = new Blob([output], { type: 'image/gif' })
-      size = output.byteLength / 1024
       const rawSrc = img.src
       img.src = URL.createObjectURL(blob)
       if (rawSrc.startsWith('blob:')) URL.revokeObjectURL(rawSrc)
 
-      pre.textContent = `Rendered ${ frames.length } frame(s) at ${ props.maxColors } max colors in ${ time }ms
-Output size: ${ ~~size }kb`
+      pre.textContent = `Rendered ${ frames.length } frame(s) at ${ encoder.maxColors } max colors in ${ time }ms
+Output size: ${ ~~(output.byteLength / 1024) }kb`
     }
 
     Array.from(document.querySelectorAll('input')).forEach(input => {

@@ -80,10 +80,6 @@ export function createEncoder(options: EncoderOptions) {
       const colorTable = createPalette(context)
         .getColors('rgb')
         .map(val => val.color)
-      while (colorTable.length < colorTableSize) {
-        colorTable.push([0, 0, 0])
-      }
-      log.timeEnd('palette:generate')
 
       // debug
       log.debug('palette:maxColors', maxColors)
@@ -98,6 +94,11 @@ export function createEncoder(options: EncoderOptions) {
         hexColorTable.map(() => '%c ').join(''),
         ...hexColorTable.map(hex => `margin: 1px; background: ${ hex }`),
       )
+
+      while (colorTable.length < colorTableSize) {
+        colorTable.push([0, 0, 0])
+      }
+      log.timeEnd('palette:generate')
 
       log.time('frames:index')
       const indexedFrames = await indexFramesInWorker({
