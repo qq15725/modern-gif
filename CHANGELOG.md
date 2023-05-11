@@ -1,3 +1,7 @@
+## [1.0.6](https://github.com/qq15725/modern-gif/compare/v1.0.5...v1.0.6) (2023-05-11)
+
+
+
 ## [1.0.5](https://github.com/qq15725/modern-gif/compare/v1.0.4...v1.0.5) (2023-05-11)
 
 
