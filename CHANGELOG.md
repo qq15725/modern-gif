@@ -1,3 +1,12 @@
+## [1.0.7](https://github.com/qq15725/modern-gif/compare/v1.0.6...v1.0.7) (2023-05-12)
+
+
+### Bug Fixes
+
+* Image sampling ([aa0bdad](https://github.com/qq15725/modern-gif/commit/aa0bdad2c7f59dcd9aea962470cbc8f46323e9ac))
+
+
+
 ## [1.0.6](https://github.com/qq15725/modern-gif/compare/v1.0.5...v1.0.6) (2023-05-11)
 
 
