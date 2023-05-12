@@ -143,9 +143,10 @@ Output size: ${ ~~(output.byteLength / 1024) }kb`
             const file = input.files[i]
             if (file.type === 'image/gif') {
               const buffer = await file.arrayBuffer()
-              const { width, height } = decode(buffer)
-              encoder.width = width
-              encoder.height = height
+              const gif = decode(buffer)
+              console.log(gif)
+              encoder.width = gif.width
+              encoder.height = gif.height
               frames.push(...(await decodeFramesInWorker(buffer, workerUrl)))
             } else {
               const url = URL.createObjectURL(file)
