@@ -98,17 +98,22 @@
 
     async function render() {
       if (pre.textContent.startsWith('Encoding')) return
-
       pre.textContent = 'Encoding...'
 
       encoder.maxColors = props.maxColors
 
-      for (let len = frames.length, i = 0; i < len; i++) {
-        await encoder.encode({
-          imageData: frames[i].imageData,
-          delay: props.delay,
-        })
-      }
+      // eslint-disable-next-line no-console
+      console.time('encode')
+      await Promise.all(
+        frames.map(frame => {
+          return encoder.encode({
+            imageData: frame.imageData,
+            delay: props.delay,
+          })
+        }),
+      )
+      // eslint-disable-next-line no-console
+      console.timeEnd('encode')
 
       const start = Date.now()
       const output = await encoder.flush()

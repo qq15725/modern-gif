@@ -39,12 +39,12 @@ export function createWorker(options: WorkerOptions) {
 
   const call = (function () {
     let id = 0
-    return (data: any, transfer?: Transferable[], index?: number): Promise<any> => {
+    return (type: string, data: any, transfer?: Transferable[], index?: number): Promise<any> => {
       return new Promise(resolve => {
         const worker = getWorker(index)
         if (!worker) return resolve(undefined)
         callbacks.set(id, resolve)
-        worker.postMessage({ id: id++, data }, { transfer })
+        worker.postMessage({ id: id++, type, data }, { transfer })
       })
     }
   }())

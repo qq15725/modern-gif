@@ -122,7 +122,7 @@ export async function decodeFramesInWorker(source: BufferSource, workerUrl: stri
   const gif = resovleSource(source, 'uint8Array')
   const worker = createWorker({ workerUrl })
   return await worker.call(
-    { type: 'frames:decode', source: gif },
+    'frames:decode', gif,
     [gif.buffer],
   )
 }

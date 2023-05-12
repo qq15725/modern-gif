@@ -35,21 +35,15 @@ export function mergeBuffers(buffers: Uint8Array[]): Uint8Array {
   return container
 }
 
-export function resovleSourceBox(source: CanvasImageSource | BufferSource) {
-  if (ArrayBuffer.isView(source) || source instanceof ArrayBuffer) {
-    return undefined
-  } else {
-    return {
-      width: typeof source.width === 'number' ? source.width : source.width.baseVal.value,
-      height: typeof source.height === 'number' ? source.height : source.height.baseVal.value,
-    }
-  }
+interface ResovleSourceOptions {
+  width?: number
+  height?: number
 }
 
-export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array'): Uint8Array
-export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8ClampedArray'): Uint8ClampedArray
-export function resovleSource(source: CanvasImageSource | BufferSource, output: 'dataView'): DataView
-export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array' | 'uint8ClampedArray' | 'dataView') {
+export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array', options?: ResovleSourceOptions): Uint8Array
+export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8ClampedArray', options?: ResovleSourceOptions): Uint8ClampedArray
+export function resovleSource(source: CanvasImageSource | BufferSource, output: 'dataView', options?: ResovleSourceOptions): DataView
+export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array' | 'uint8ClampedArray' | 'dataView', options?: ResovleSourceOptions) {
   let buffer: ArrayBuffer
   if (ArrayBuffer.isView(source)) {
     buffer = source.buffer
@@ -57,14 +51,14 @@ export function resovleSource(source: CanvasImageSource | BufferSource, output: 
     buffer = source
   } else {
     const canvas = document.createElement('canvas')
-    const { width, height } = resovleSourceBox(source)!
-    canvas.width = width
-    canvas.height = height
+    const { width, height } = options || {}
     const context2d = canvas.getContext('2d')
     if (!context2d) {
       throw new Error('Failed to create canvas context2d')
     }
-    context2d.drawImage(source, 0, 0)
+    canvas.width = width ?? (typeof source.width === 'number' ? source.width : source.width.baseVal.value)
+    canvas.height = height ?? (typeof source.height === 'number' ? source.height : source.height.baseVal.value)
+    context2d.drawImage(source, 0, 0, canvas.width, canvas.height)
     buffer = context2d.getImageData(0, 0, canvas.width, canvas.height).data.buffer
   }
 

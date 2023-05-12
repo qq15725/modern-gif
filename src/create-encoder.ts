@@ -1,5 +1,5 @@
 import { createPalette } from 'modern-palette'
-import { TRAILER, cropBuffer, loadImage, mergeBuffers, resovleSource, resovleSourceBox } from './utils'
+import { TRAILER, loadImage, mergeBuffers, resovleSource } from './utils'
 import { encodeHeader } from './encode-header'
 import { encodeFrame } from './encode-frame'
 import { indexFrames } from './index-frames'
@@ -31,46 +31,38 @@ export function createEncoder(options: EncoderOptions) {
     log: createLogger(debug),
     palette: createPalette(),
     worker: createWorker({ workerUrl, workerNumber }),
+    encodeId: 0,
     async encode(options: EncodeFrameOptions): Promise<void> {
-      const { log, frames, worker, width, height } = encoder
+      const { log, frames, encodeId, width, height } = encoder
 
-      const index = frames.length
-      if (index === 0) await worker.call({ type: 'palette:init' }, undefined, 0)
+      encoder.encodeId++
 
       const { width: frameWidth = width, height: frameHeight = height } = options
       let { imageData: source } = options
 
-      log.time(`palette:sample-${ index }`)
+      log.time(`palette:sample-${ encodeId }`)
 
-      source = typeof source === 'string'
-        ? await loadImage(source)
-        : source
+      try {
+        source = typeof source === 'string'
+          ? await loadImage(source)
+          : source
 
-      const box = resovleSourceBox(source)
+        const imageData = resovleSource(source, 'uint8ClampedArray', {
+          width: frameWidth,
+          height: frameHeight,
+        })
 
-      let imageData = resovleSource(source, 'uint8ClampedArray')
+        frames.push({
+          width: frameWidth,
+          height: frameHeight,
+          ...options,
+          imageData,
+        })
 
-      if (box && frameWidth && frameHeight && box.width > frameWidth && box.height > frameHeight) {
-        imageData = cropBuffer(
-          resovleSource(source, 'uint8ClampedArray'),
-          {
-            width: frameWidth,
-            height: frameHeight,
-            rawWidth: box.width,
-          },
-        )
+        await addSampleInWorker(imageData)
+      } finally {
+        log.timeEnd(`palette:sample-${ encodeId }`)
       }
-
-      frames.push({
-        width: frameWidth,
-        height: frameHeight,
-        ...options,
-        imageData,
-      })
-
-      await addSampleInWorker(imageData)
-
-      log.timeEnd(`palette:sample-${ index }`)
     },
     async flush(): Promise<Uint8Array> {
       const { log, frames, width, height, maxColors, palette } = encoder
@@ -156,6 +148,7 @@ export function createEncoder(options: EncoderOptions) {
       // reset
       palette.reset()
       encoder.frames = []
+      encoder.encodeId = 0
 
       return output
     },
@@ -163,7 +156,7 @@ export function createEncoder(options: EncoderOptions) {
 
   async function addSampleInWorker(options: Uint8ClampedArray): Promise<void> {
     const result = await encoder.worker.call(
-      { type: 'palette:addSample', options },
+      'palette:addSample', options,
       undefined,
       0,
     )
@@ -173,7 +166,7 @@ export function createEncoder(options: EncoderOptions) {
 
   async function generateInWorker(maxColors: number): Promise<Context> {
     const result = await encoder.worker.call(
-      { type: 'palette:generate', options: { maxColors } },
+      'palette:generate', { maxColors },
       undefined,
       0,
     )
@@ -184,7 +177,7 @@ export function createEncoder(options: EncoderOptions) {
 
   async function indexFramesInWorker(options: IndexFramesOptions): Promise<ReturnType<typeof indexFrames>> {
     const result = await encoder.worker.call(
-      { type: 'frames:index', options },
+      'frames:index', options,
     )
     if (result) return result as any
     return indexFrames(options)
@@ -192,7 +185,7 @@ export function createEncoder(options: EncoderOptions) {
 
   async function cropFramesInWorker(options: CropFramesOptions): Promise<ReturnType<typeof cropFrames>> {
     const result = await encoder.worker.call(
-      { type: 'frames:crop', options },
+      'frames:crop', options,
       options.frames.map(val => val.imageData.buffer),
     )
     if (result) return result as any
@@ -201,7 +194,7 @@ export function createEncoder(options: EncoderOptions) {
 
   async function encodeFrameInWorker(options: EncodeFrameOptions<Uint8ClampedArray>): Promise<ReturnType<typeof encodeFrame>> {
     const result = await encoder.worker.call(
-      { type: 'frame:encode', options },
+      'frame:encode', options,
       [options.imageData.buffer],
     )
     if (result) return result as any
