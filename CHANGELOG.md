@@ -1,3 +1,12 @@
+## [1.0.8](https://github.com/qq15725/modern-gif/compare/v1.0.7...v1.0.8) (2023-05-12)
+
+
+### Performance Improvements
+
+* sampling performance ([7d6229e](https://github.com/qq15725/modern-gif/commit/7d6229e2d80885f39cfe9df363cd91bfcb765239))
+
+
+
 ## [1.0.7](https://github.com/qq15725/modern-gif/compare/v1.0.6...v1.0.7) (2023-05-12)
 
 
