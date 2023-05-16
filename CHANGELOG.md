@@ -1,3 +1,12 @@
+# [1.1.0](https://github.com/qq15725/modern-gif/compare/v1.0.8...v1.1.0) (2023-05-16)
+
+
+### Features
+
+* merge decodeFramesInWorker to decodeFrames ([624bd49](https://github.com/qq15725/modern-gif/commit/624bd4973e04cab2148bed60916fea42943a71b0))
+
+
+
 ## [1.0.8](https://github.com/qq15725/modern-gif/compare/v1.0.7...v1.0.8) (2023-05-12)
 
 
