@@ -18,37 +18,44 @@
   </a>
 </p>
 
-## 📦 Install
+## Features
+
+- ⚡️ Encode(or create Encoder), Decode
+
+- 🎨 Set max colors(2 - 255)
+
+- 🦄️ Compression size
+
+- ☁️️ Web Worker
+
+- 🦾 TypeScript
+
+## Install
 
 ```sh
 npm i modern-gif
 ```
 
-## 🦄 Usage
+## Usage
 
 ### Encode
 
 ```ts
 import { encode } from 'modern-gif'
-// import the `workerUrl` through `Vite`
+// import the workerUrl through Vite
 import workerUrl from 'modern-gif/worker?url'
 
 const output = await encode({
+  // workerUrl is optional
   workerUrl,
   workerNumber: 2,
   width: 200,
   height: 200,
   frames: [
-    {
-      // CanvasImageSource | BufferSource | string
-      imageData: '/example1.png',
-      delay: 100,
-    },
-    {
-      imageData: '/example2.png',
-      delay: 100,
-    }
-  ]
+    // CanvasImageSource | BufferSource | string
+    { imageData: '/example1.png', delay: 100 },
+    { imageData: '/example2.png', delay: 100 }
+  ],
 })
 
 const blob = new Blob([output], { type: 'image/gif' })
@@ -58,27 +65,58 @@ window.open(URL.createObjectURL(blob))
 ### Decode
 
 ```ts
-import { decode, decodeFramesInWorker } from 'modern-gif'
-// import the `workerUrl` through `Vite`
+import { decode, decodeFrames } from 'modern-gif'
+import workerUrl from 'modern-gif/worker?url'
+
+const buffer = await window.fetch('/test.gif')
+  .then(res => res.arrayBuffer())
+
+// GIF file format data without image data
+const gif = decode(buffer)
+console.log(gif)
+// Image data for all frames (workerUrl is optional)
+const frames = await decodeFrames(buffer, { workerUrl })
+frames.forEach(frame => {
+  const canvas = document.createElement('canvas')
+  canvas.width = frame.width
+  canvas.height = frame.height
+  canvas.getContext('2d').putImageData(
+    new ImageData(frame.imageData, frame.width, frame.height),
+    0, 0,
+  )
+  document.body.append(canvas)
+})
+```
+
+### Compression size
+
+It is easy to compress a gif by encoding and decoding
+
+```ts
+import { decode, decodeFrames, encode } from 'modern-gif'
+// import the workerUrl through Vite
 import workerUrl from 'modern-gif/worker?url'
 
 const buffer = await window.fetch('/test.gif')
   .then(res => res.arrayBuffer())
 
 const gif = decode(buffer)
-console.log(gif)
-
-decodeFramesInWorker(buffer, workerUrl).forEach(frame => {
-  const canvas = document.createElement('canvas')
-  const context2d = canvas.getContext('2d')
-  canvas.width = frame.width
-  canvas.height = frame.height
-  context2d.putImageData(
-    new ImageData(frame.imageData, frame.width, frame.height),
-    0, 0,
-  )
-  document.body.append(canvas)
+// workerUrl is optional
+const frames = await decodeFrames(buffer, { workerUrl })
+const output = await encode({
+  // workerUrl is optional
+  workerUrl,
+  workerNumber: 2,
+  width: gif.width,
+  height: gif.height,
+  frames,
+  // lossy compression 2 - 255
+  maxColors: 255,
 })
+
+const blob = new Blob([output], { type: 'image/gif' })
+window.open(URL.createObjectURL(blob))
+
 ```
 
 ## Types

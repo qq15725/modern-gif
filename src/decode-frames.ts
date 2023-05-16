@@ -17,16 +17,26 @@ export interface DecodeFramesOptions {
   range?: number[]
 }
 
-export function decodeFrames(
-  source: BufferSource,
-  options: DecodeFramesOptions = {},
-): DecodedFrame[] {
+export interface DecodeFramesInWorkerOptions extends DecodeFramesOptions {
+  workerUrl: string
+}
+
+export function decodeFrames(source: BufferSource, options: DecodeFramesInWorkerOptions): Promise<DecodedFrame[]>
+export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions): DecodedFrame[]
+export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions | DecodeFramesInWorkerOptions): any {
   const array = resovleSource(source, 'uint8Array')
+
+  if ((options as any)?.workerUrl) {
+    return createWorker({ workerUrl: (options as any).workerUrl }).call(
+      'frames:decode', array,
+      [array.buffer],
+    )
+  }
 
   const {
     gif = decode(source),
     range,
-  } = options
+  } = options ?? {}
 
   const {
     width: globalWidth,
@@ -116,13 +126,4 @@ export function decodeFrames(
       imageData: pixels.slice(0),
     }
   })
-}
-
-export async function decodeFramesInWorker(source: BufferSource, workerUrl: string): Promise<DecodedFrame[]> {
-  const gif = resovleSource(source, 'uint8Array')
-  const worker = createWorker({ workerUrl })
-  return await worker.call(
-    'frames:decode', gif,
-    [gif.buffer],
-  )
 }

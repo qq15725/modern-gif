@@ -68,7 +68,7 @@
 
   <script type="module">
     import workerUrl from '../dist/worker?url'
-    import { createEncoder, decode, decodeFramesInWorker } from '../src'
+    import { createEncoder, decode, decodeFrames } from '../src'
 
     const img = document.querySelector('.example')
     const pre = document.querySelector('pre')
@@ -90,7 +90,7 @@
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
       const { width, height } = decode(source)
-      frames = await decodeFramesInWorker(source, workerUrl)
+      frames = await decodeFrames(source, { workerUrl })
       encoder.width = width
       encoder.height = height
       render()
@@ -144,10 +144,11 @@ Output size: ${ ~~(output.byteLength / 1024) }kb`
             if (file.type === 'image/gif') {
               const buffer = await file.arrayBuffer()
               const gif = decode(buffer)
+              // eslint-disable-next-line no-console
               console.log(gif)
               encoder.width = gif.width
               encoder.height = gif.height
-              frames.push(...(await decodeFramesInWorker(buffer, workerUrl)))
+              frames.push(...(await decodeFrames(buffer, { workerUrl })))
             } else {
               const url = URL.createObjectURL(file)
               frames.push({ imageData: url })
