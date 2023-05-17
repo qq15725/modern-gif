@@ -1,3 +1,12 @@
+## [1.1.1](https://github.com/qq15725/modern-gif/compare/v1.1.0...v1.1.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* disposal 3 ([78fb77c](https://github.com/qq15725/modern-gif/commit/78fb77c326cd44050e94d3761ea7a02016d0d1d7))
+
+
+
 # [1.1.0](https://github.com/qq15725/modern-gif/compare/v1.0.8...v1.1.0) (2023-05-16)
 
 
