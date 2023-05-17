@@ -89,10 +89,12 @@
 
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
-      const { width, height } = decode(source)
-      frames = await decodeFrames(source, { workerUrl })
-      encoder.width = width
-      encoder.height = height
+      const gif = decode(source)
+      frames = await decodeFrames(source)
+      encoder.width = gif.width
+      encoder.height = gif.height
+      // eslint-disable-next-line no-console
+      console.log(gif)
       render()
     }
 

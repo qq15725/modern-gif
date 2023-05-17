@@ -45,6 +45,14 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
     frames: globalFrames,
   } = gif
 
+  const backgroundColorIndex = gif.globalColorTable && globalColorTable
+    ? gif.backgroundColorIndex
+    : undefined
+
+  const backgroundColor = backgroundColorIndex !== undefined && globalColorTable
+    ? globalColorTable[backgroundColorIndex]
+    : [0, 0, 0]
+
   const frames = range
     ? globalFrames.slice(range[0], range[1] + 1)
     : globalFrames
@@ -72,11 +80,11 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
 
     const {
       transparent,
-      transparentIndex: transparentIndex_,
+      transparentIndex: localTransparentIndex,
     } = graphicControl ?? {}
 
     const palette = localColorTable ? colorTable : globalColorTable
-    const transparentIndex = transparent ? transparentIndex_ : -1
+    const transparentIndex = transparent ? localTransparentIndex : -1
 
     const compressedData = mergeBuffers(
       imageDataPositions.map(
@@ -84,20 +92,27 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       ),
     )
 
-    let colorIndexes = lzwDecode(lzwMinCodeSize, compressedData, width * height)
+    let colorIndexs = lzwDecode(lzwMinCodeSize, compressedData, width * height)
 
     if (interlaced) {
-      colorIndexes = deinterlace(colorIndexes, width)
+      colorIndexs = deinterlace(colorIndexs, width)
     }
 
-    if (previousFrame && previousFrame?.disposal !== 1) {
-      const { left, top, width, height } = previousFrame
+    if (previousFrame?.disposal !== 1) {
+      const { left = 0, top = 0, width = globalWidth, height = globalHeight } = previousFrame ?? {}
       const bottom = top + height
       for (let y = top; y < bottom; y++) {
         const globalOffset = y * globalWidth + left
         for (let x = 0; x < width; x++) {
           const index = (globalOffset + x) * 4
-          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+          if (transparentIndex === backgroundColorIndex) {
+            pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+          } else {
+            pixels[index] = backgroundColor[0]
+            pixels[index + 1] = backgroundColor[1]
+            pixels[index + 2] = backgroundColor[2]
+            pixels[index + 3] = 255
+          }
         }
       }
     }
@@ -106,7 +121,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       const globalOffset = y * globalWidth + left
       const localOffset = (y - top) * width
       for (let x = 0; x < width; x++) {
-        const colorIndex = colorIndexes[localOffset + x]
+        const colorIndex = colorIndexs[localOffset + x]
         if (colorIndex === transparentIndex) continue
         const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
         const index = (globalOffset + x) * 4
