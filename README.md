@@ -38,8 +38,6 @@ npm i modern-gif
 
 ## Usage
 
-Encode
-
 ```ts
 import { encode } from 'modern-gif'
 // import the workerUrl through Vite
@@ -60,7 +58,8 @@ const blob = new Blob([output], { type: 'image/gif' })
 window.open(URL.createObjectURL(blob))
 ```
 
-Decode
+<details>
+<summary>Decode</summary><br>
 
 ```ts
 import { decode, decodeFrames } from 'modern-gif'
@@ -86,6 +85,8 @@ frames.forEach(frame => {
   document.body.append(canvas)
 })
 ```
+
+<br></details>
 
 <details>
 <summary>Compression size</summary><br>
