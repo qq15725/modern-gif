@@ -1,3 +1,12 @@
+## [1.1.2](https://github.com/qq15725/modern-gif/compare/v1.1.1...v1.1.2) (2023-05-18)
+
+
+### Features
+
+* upgrade dependencies ([3d713f4](https://github.com/qq15725/modern-gif/commit/3d713f43148f22b505b8dd15e0bad4d4a5b1a286))
+
+
+
 ## [1.1.1](https://github.com/qq15725/modern-gif/compare/v1.1.0...v1.1.1) (2023-05-17)
 
 
