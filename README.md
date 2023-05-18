@@ -38,7 +38,7 @@ npm i modern-gif
 
 ## Usage
 
-### Encode
+Encode
 
 ```ts
 import { encode } from 'modern-gif'
@@ -48,9 +48,7 @@ import workerUrl from 'modern-gif/worker?url'
 const output = await encode({
   // workerUrl is optional
   workerUrl,
-  workerNumber: 2,
-  width: 200,
-  height: 200,
+  width: 200, height: 200,
   frames: [
     // CanvasImageSource | BufferSource | string
     { imageData: '/example1.png', delay: 100 },
@@ -62,7 +60,7 @@ const blob = new Blob([output], { type: 'image/gif' })
 window.open(URL.createObjectURL(blob))
 ```
 
-### Decode
+Decode
 
 ```ts
 import { decode, decodeFrames } from 'modern-gif'
@@ -74,6 +72,7 @@ const buffer = await window.fetch('/test.gif')
 // GIF file format data without image data
 const gif = decode(buffer)
 console.log(gif)
+
 // Image data for all frames (workerUrl is optional)
 const frames = await decodeFrames(buffer, { workerUrl })
 frames.forEach(frame => {
@@ -88,7 +87,8 @@ frames.forEach(frame => {
 })
 ```
 
-### Compression size
+<details>
+<summary>Compression size</summary><br>
 
 It is easy to compress a gif by encoding and decoding
 
@@ -105,10 +105,8 @@ const gif = decode(buffer)
 const frames = await decodeFrames(buffer, { workerUrl })
 const output = await encode({
   // workerUrl is optional
-  workerUrl,
-  workerNumber: 2,
-  width: gif.width,
-  height: gif.height,
+  workerUrl, workerNumber: 2,
+  width: gif.width, height: gif.height,
   frames,
   // lossy compression 2 - 255
   maxColors: 255,
@@ -116,8 +114,34 @@ const output = await encode({
 
 const blob = new Blob([output], { type: 'image/gif' })
 window.open(URL.createObjectURL(blob))
-
 ```
+
+<br></details>
+
+<details>
+<summary>CDN</summary><br>
+
+```html
+<script src="https://unpkg.com/modern-gif"></script>
+<script>
+  modernGif.encode({
+    width: 200, height: 200,
+    frames: [
+      // CanvasImageSource | BufferSource | string
+      { imageData: '/example1.png', delay: 100 },
+      { imageData: '/example2.png', delay: 100 }
+    ],
+  }).then(output => {
+    const blob = new Blob([output], { type: 'image/gif' })
+    const link = document.createElement('a')
+    link.download = 'screenshot.png'
+    link.href = URL.createObjectURL(blob)
+    link.click()
+  })
+</script>
+```
+
+<br></details>
 
 ## Types
 
