@@ -1,3 +1,12 @@
+## [1.1.3](https://github.com/qq15725/modern-gif/compare/v1.1.2...v1.1.3) (2023-05-18)
+
+
+### Bug Fixes
+
+* decode frames ([a9adaf9](https://github.com/qq15725/modern-gif/commit/a9adaf924b3c6e15ff9568f95cd2fc1fd378dfe6))
+
+
+
 ## [1.1.2](https://github.com/qq15725/modern-gif/compare/v1.1.1...v1.1.2) (2023-05-18)
 
 
