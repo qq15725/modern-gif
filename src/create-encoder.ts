@@ -29,7 +29,9 @@ export function createEncoder(options: EncoderOptions) {
     maxColors,
     frames: [] as EncodeFrameOptions<Uint8ClampedArray>[],
     log: createLogger(debug),
-    palette: createPalette(),
+    palette: createPalette({
+      skipTransparent: false,
+    }),
     worker: createWorker({ workerUrl, workerNumber }),
     encodeId: 0,
     async encode(options: EncodeFrameOptions): Promise<void> {
@@ -71,7 +73,7 @@ export function createEncoder(options: EncoderOptions) {
       const context = await generateInWorker(maxColors)
       const colorTable = createPalette(context)
         .getColors('rgb')
-        .map(val => val.color)
+        .map(color => color.value)
 
       // debug
       log.debug('palette:maxColors', maxColors)

@@ -4,7 +4,9 @@ import { encodeFrame } from './encode-frame'
 import { indexFrames } from './index-frames'
 import { cropFrames } from './crop-frames'
 
-const palette = createPalette()
+const palette = createPalette({
+  skipTransparent: false,
+})
 
 self.onmessage = event => {
   const { id, type, data: req } = event.data
