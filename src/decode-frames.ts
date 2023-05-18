@@ -45,14 +45,6 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
     frames: globalFrames,
   } = gif
 
-  const backgroundColorIndex = gif.globalColorTable && globalColorTable
-    ? gif.backgroundColorIndex
-    : undefined
-
-  const backgroundColor = backgroundColorIndex !== undefined && globalColorTable
-    ? globalColorTable[backgroundColorIndex]
-    : [0, 0, 0]
-
   const frames = range
     ? globalFrames.slice(range[0], range[1] + 1)
     : globalFrames
@@ -105,14 +97,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
         const globalOffset = y * globalWidth + left
         for (let x = 0; x < width; x++) {
           const index = (globalOffset + x) * 4
-          if (transparentIndex === backgroundColorIndex) {
-            pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
-          } else {
-            pixels[index] = backgroundColor[0]
-            pixels[index + 1] = backgroundColor[1]
-            pixels[index + 2] = backgroundColor[2]
-            pixels[index + 3] = 255
-          }
+          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
         }
       }
     }
