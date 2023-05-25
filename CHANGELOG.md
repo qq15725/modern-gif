@@ -1,3 +1,12 @@
+## [1.1.4](https://github.com/qq15725/modern-gif/compare/v1.1.3...v1.1.4) (2023-05-25)
+
+
+### Features
+
+* change worker build target to es2015 ([80b2717](https://github.com/qq15725/modern-gif/commit/80b27171080e76f213598a9a2ea5eb2d6b3830c6))
+
+
+
 ## [1.1.3](https://github.com/qq15725/modern-gif/compare/v1.1.2...v1.1.3) (2023-05-18)
 
 
