@@ -6,6 +6,7 @@ const resolvePath = (str: string) => resolve(__dirname, str)
 
 export default defineConfig({
   build: {
+    target: 'es2015',
     lib: {
       formats: ['es', 'cjs', 'umd'],
       fileName: format => {
