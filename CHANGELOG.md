@@ -1,3 +1,12 @@
+## [1.1.5](https://github.com/qq15725/modern-gif/compare/v1.1.4...v1.1.5) (2023-06-30)
+
+
+### Bug Fixes
+
+* crop frames ([dd708d2](https://github.com/qq15725/modern-gif/commit/dd708d20c4f2724984bd6acda7bb6eedecea027a))
+
+
+
 ## [1.1.4](https://github.com/qq15725/modern-gif/compare/v1.1.3...v1.1.4) (2023-05-25)
 
 
