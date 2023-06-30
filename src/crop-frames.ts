@@ -15,14 +15,14 @@ export function cropFrames(options: CropFramesOptions) {
 
   let lastIndexPixels: Uint8ClampedArray | undefined
 
-  const framesLength = frames.length
   return frames.map((frame, index) => {
     const {
       width,
       height,
-      transparent,
       imageData: indexPixels,
     } = frame
+
+    const transparent = frame.transparent || (frames[index + 1]?.transparent ?? true)
 
     let left = 0
     let top = 0
@@ -171,7 +171,7 @@ export function cropFrames(options: CropFramesOptions) {
       top,
       width: newWidth,
       height: newHeight,
-      disposal: (transparent && index !== framesLength - 1 ? 2 : 1) as 2 | 1,
+      disposal: (transparent ? 2 : 1) as 2 | 1,
       imageData: croppedIndexPixels,
     }
   })
