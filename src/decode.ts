@@ -48,7 +48,7 @@ export function decode(source: BufferSource): Gif {
   gif.colorResoluTion = (parseInt(bits.slice(1, 4).join(''), 2) + 1) as any
   gif.colorTableSorted = Boolean(bits[4])
   const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
-  gif.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
+  gif.colorTableSize = Math.pow(2, colorTableSize + 1)
   // ↑ <Packed Fields>
   gif.backgroundColorIndex = readByte()
   gif.pixelAspectRatio = readByte()
@@ -84,7 +84,7 @@ export function decode(source: BufferSource): Gif {
       frame.colorTableSorted = Boolean(bits[2])
       frame.reserved = parseInt(bits.slice(3, 5).join(''), 2) as any
       const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
-      frame.colorTableSize = colorTableSize ? Math.pow(2, colorTableSize + 1) : 0
+      frame.colorTableSize = Math.pow(2, colorTableSize + 1)
       // ↑ <Packed Fields>
 
       // Local Color Table
