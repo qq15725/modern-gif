@@ -1,3 +1,12 @@
+## [1.1.6](https://github.com/qq15725/modern-gif/compare/v1.1.5...v1.1.6) (2023-08-11)
+
+
+### Bug Fixes
+
+* colorTableSize decoding exception ([96b3001](https://github.com/qq15725/modern-gif/commit/96b3001596634e5324370747a51492510943f7ab))
+
+
+
 ## [1.1.5](https://github.com/qq15725/modern-gif/compare/v1.1.4...v1.1.5) (2023-06-30)
 
 
