@@ -90,14 +90,22 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       colorIndexs = deinterlace(colorIndexs, width)
     }
 
-    if (previousFrame?.disposal !== 1) {
-      const { left = 0, top = 0, width = globalWidth, height = globalHeight } = previousFrame ?? {}
+    const previousDisposal = previousFrame?.disposal
+    if (previousDisposal === 0 || previousDisposal === 2) {
+      const { left, top, width, height } = previousFrame!
       const bottom = top + height
       for (let y = top; y < bottom; y++) {
         const globalOffset = y * globalWidth + left
+        const localOffset = (y - top) * width
         for (let x = 0; x < width; x++) {
-          const index = (globalOffset + x) * 4
-          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+          const colorIndex = colorIndexs[localOffset + x]
+          if (
+            disposal === 2
+            || (colorIndex !== transparentIndex)
+          ) {
+            const index = (globalOffset + x) * 4
+            pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+          }
         }
       }
     }
