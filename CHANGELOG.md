@@ -1,3 +1,12 @@
+## [1.1.8](https://github.com/qq15725/modern-gif/compare/v1.1.7...v1.1.8) (2023-08-24)
+
+
+### Bug Fixes
+
+* typo ([50265c4](https://github.com/qq15725/modern-gif/commit/50265c45da2d6fe2fcc013c4fe497b7b59cd0008))
+
+
+
 ## [1.1.7](https://github.com/qq15725/modern-gif/compare/v1.1.6...v1.1.7) (2023-08-21)
 
 
