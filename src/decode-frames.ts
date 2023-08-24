@@ -100,7 +100,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
         for (let x = 0; x < width; x++) {
           const colorIndex = colorIndexs[localOffset + x]
           if (
-            disposal === 2
+            previousDisposal === 2
             || (colorIndex !== transparentIndex)
           ) {
             const index = (globalOffset + x) * 4
