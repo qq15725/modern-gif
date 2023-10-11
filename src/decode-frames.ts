@@ -49,8 +49,11 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
     ? globalFrames.slice(range[0], range[1] + 1)
     : globalFrames
 
-  const pixels = new Uint8ClampedArray(globalWidth * globalHeight * 4)
+  const hasDisposal3 = frames.some(frame => frame.disposal === 3)
+
+  let pixels = new Uint8ClampedArray(globalWidth * globalHeight * 4)
   let previousFrame: Frame | undefined
+  let previousPixels: Uint8ClampedArray | undefined
 
   return frames.map(frame => {
     const {
@@ -64,8 +67,8 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       lzwMinCodeSize,
       imageDataPositions,
       graphicControl,
-      disposal,
       delay,
+      disposal,
     } = frame
 
     const bottom = top + height
@@ -84,27 +87,33 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       ),
     )
 
-    let colorIndexs = lzwDecode(lzwMinCodeSize, compressedData, width * height)
+    let colorIndexes = lzwDecode(lzwMinCodeSize, compressedData, width * height)
 
     if (interlaced) {
-      colorIndexs = deinterlace(colorIndexs, width)
+      colorIndexes = deinterlace(colorIndexes, width)
     }
 
-    const previousDisposal = previousFrame?.disposal
-    if (previousDisposal === 0 || previousDisposal === 2) {
-      const { left, top, width, height } = previousFrame!
-      const bottom = top + height
-      for (let y = top; y < bottom; y++) {
-        const globalOffset = y * globalWidth + left
-        const localOffset = (y - top) * width
-        for (let x = 0; x < width; x++) {
-          const colorIndex = colorIndexs[localOffset + x]
-          if (
-            previousDisposal === 2
-            || (colorIndex !== transparentIndex)
-          ) {
-            const index = (globalOffset + x) * 4
-            pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+    if (disposal === 3) {
+      if (previousPixels) {
+        pixels = previousPixels?.slice()
+      }
+    } else {
+      const previousDisposal = previousFrame?.disposal
+      if (previousDisposal === 0 || previousDisposal === 2) {
+        const { left, top, width, height } = previousFrame!
+        const bottom = top + height
+        for (let y = top; y < bottom; y++) {
+          const globalOffset = y * globalWidth + left
+          const localOffset = (y - top) * width
+          for (let x = 0; x < width; x++) {
+            const colorIndex = colorIndexes[localOffset + x]
+            if (
+              previousDisposal === 2
+              || (colorIndex !== transparentIndex)
+            ) {
+              const index = (globalOffset + x) * 4
+              pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
+            }
           }
         }
       }
@@ -114,24 +123,29 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       const globalOffset = y * globalWidth + left
       const localOffset = (y - top) * width
       for (let x = 0; x < width; x++) {
-        const colorIndex = colorIndexs[localOffset + x]
-        if (colorIndex === transparentIndex) continue
-        const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
-        const index = (globalOffset + x) * 4
-        pixels[index] = r
-        pixels[index + 1] = g
-        pixels[index + 2] = b
-        pixels[index + 3] = 255
+        const colorIndex = colorIndexes[localOffset + x]
+        if (colorIndex !== transparentIndex) {
+          const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
+          const index = (globalOffset + x) * 4
+          pixels[index] = r
+          pixels[index + 1] = g
+          pixels[index + 2] = b
+          pixels[index + 3] = 255
+        }
       }
     }
 
-    if (disposal !== 3) previousFrame = frame
+    if (hasDisposal3 && (!previousPixels || disposal === 0 || disposal === 1)) {
+      previousPixels = pixels.slice()
+    }
+
+    previousFrame = frame
 
     return {
       width: globalWidth,
       height: globalHeight,
       delay,
-      imageData: pixels.slice(0),
+      imageData: pixels.slice(),
     }
   })
 }
