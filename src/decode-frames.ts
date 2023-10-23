@@ -53,7 +53,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
 
   let pixels = new Uint8ClampedArray(globalWidth * globalHeight * 4)
   let previousFrame: Frame | undefined
-  let previousPixels: Uint8ClampedArray | undefined
+  let previousPixels = pixels.slice()
 
   return frames.map(frame => {
     const {
@@ -135,7 +135,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       }
     }
 
-    if (hasDisposal3 && (!previousPixels || disposal === 0 || disposal === 1)) {
+    if (hasDisposal3 && (disposal === 0 || disposal === 1)) {
       previousPixels = pixels.slice()
     }
 
