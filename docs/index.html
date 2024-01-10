@@ -68,33 +68,25 @@
 
   <script type="module">
     import workerUrl from '../dist/worker?url'
-    import { createEncoder, decode, decodeFrames } from '../src'
+    import { decode, decodeFrames, encode } from '../src'
 
     const img = document.querySelector('.example')
     const pre = document.querySelector('pre')
 
-    let frames = null
     const props = {
       maxColors: 255,
       delay: 100,
-    }
-    const encoder = createEncoder({
-      debug: true,
-      workerUrl,
-      workerNumber: 2,
       width: 1,
       height: 1,
-      maxColors: props.maxColors,
-    })
+      frames: [],
+    }
 
     async function init() {
       const source = await fetch(img.src).then(res => res.arrayBuffer())
       const gif = decode(source)
-      frames = await decodeFrames(source)
-      encoder.width = gif.width
-      encoder.height = gif.height
-      // eslint-disable-next-line no-console
-      console.log(gif)
+      props.frames = await decodeFrames(source)
+      props.width = gif.width
+      props.height = gif.height
       render()
     }
 
@@ -102,23 +94,20 @@
       if (pre.textContent.startsWith('Encoding')) return
       pre.textContent = 'Encoding...'
 
-      encoder.maxColors = props.maxColors
-
-      // eslint-disable-next-line no-console
-      console.time('encode')
-      await Promise.all(
-        frames.map(frame => {
-          return encoder.encode({
-            imageData: frame.imageData,
-            delay: props.delay,
-          })
-        }),
-      )
-      // eslint-disable-next-line no-console
-      console.timeEnd('encode')
-
       const start = Date.now()
-      const output = await encoder.flush()
+      const output = await encode({
+        debug: true,
+        workerUrl,
+        width: props.width,
+        height: props.height,
+        maxColors: props.maxColors,
+        frames: props.frames.map(frame => {
+          return {
+            data: frame.data.slice(),
+            delay: props.delay,
+          }
+        }),
+      })
       const time = Date.now() - start
 
       const blob = new Blob([output], { type: 'image/gif' })
@@ -126,7 +115,7 @@
       img.src = URL.createObjectURL(blob)
       if (rawSrc.startsWith('blob:')) URL.revokeObjectURL(rawSrc)
 
-      pre.textContent = `Rendered ${ frames.length } frame(s) at ${ encoder.maxColors } max colors in ${ time }ms
+      pre.textContent = `Rendered ${ props.frames.length } frame(s) at ${ props.maxColors } max colors in ${ time }ms
 Output size: ${ ~~(output.byteLength / 1024) }kb`
     }
 
@@ -135,12 +124,12 @@ Output size: ${ ~~(output.byteLength / 1024) }kb`
       const { unit = '', name } = input.dataset
       input.addEventListener('input', async () => {
         if (input.type === 'file') {
-          frames.forEach(frame => {
+          props.frames.forEach(frame => {
             if (typeof frame.imageData === 'string' && frame.imageData.startsWith('blob:')) {
               URL.revokeObjectURL(frame.imageData)
             }
           })
-          frames = []
+          props.frames = []
           for (let len = input.files.length, i = 0; i < len; i++) {
             const file = input.files[i]
             if (file.type === 'image/gif') {
@@ -148,12 +137,12 @@ Output size: ${ ~~(output.byteLength / 1024) }kb`
               const gif = decode(buffer)
               // eslint-disable-next-line no-console
               console.log(gif)
-              encoder.width = gif.width
-              encoder.height = gif.height
-              frames.push(...(await decodeFrames(buffer, { workerUrl })))
+              props.width = gif.width
+              props.height = gif.height
+              props.frames.push(...(await decodeFrames(buffer, { workerUrl })))
             } else {
               const url = URL.createObjectURL(file)
-              frames.push({ imageData: url })
+              props.frames.push({ imageData: url })
             }
           }
           render()

@@ -1,11 +1,9 @@
-import type { createWriter } from './create-writer'
+import type { Writer } from './Writer'
 
-export function lzwEncode(minCodeSize: number, data: Uint8ClampedArray, writer: ReturnType<typeof createWriter>) {
-  const { writeByte, getCursor, calculateDistance } = writer
-
-  writeByte(minCodeSize)
-  let curSubblock = getCursor()
-  writeByte(0)
+export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: Writer) {
+  writer.writeByte(minCodeSize)
+  let curSubblock = writer.cursor
+  writer.writeByte(0)
   const clearCode = 1 << minCodeSize
   const codeMask = clearCode - 1
   const eoiCode = clearCode + 1
@@ -16,13 +14,13 @@ export function lzwEncode(minCodeSize: number, data: Uint8ClampedArray, writer: 
 
   function emitBytesToBuffer(bitBlockSize: number) {
     while (curShift >= bitBlockSize) {
-      writeByte(cur & 0xFF)
+      writer.writeByte(cur & 0xFF)
       cur >>= 8
       curShift -= 8
-      if (calculateDistance(curSubblock) === 256) {
-        writeByte(255, curSubblock)
-        curSubblock = getCursor()
-        writeByte(0)
+      if (writer.calculateDistance(curSubblock) === 256) {
+        writer.writeByte(255, curSubblock)
+        curSubblock = writer.cursor
+        writer.writeByte(0)
       }
     }
   }
@@ -47,13 +45,13 @@ export function lzwEncode(minCodeSize: number, data: Uint8ClampedArray, writer: 
       cur |= ibCode << curShift
       curShift += curCodeSize
       while (curShift >= 8) {
-        writeByte(cur & 0xFF)
+        writer.writeByte(cur & 0xFF)
         cur >>= 8
         curShift -= 8
-        if (calculateDistance(curSubblock) === 256) {
-          writeByte(255, curSubblock)
-          curSubblock = getCursor()
-          writeByte(0)
+        if (writer.calculateDistance(curSubblock) === 256) {
+          writer.writeByte(255, curSubblock)
+          curSubblock = writer.cursor
+          writer.writeByte(0)
         }
       }
       if (nextCode === 4096) {
@@ -74,10 +72,10 @@ export function lzwEncode(minCodeSize: number, data: Uint8ClampedArray, writer: 
   emitCode(ibCode) // There will still be something in the index buffer.
   emitCode(eoiCode) // End Of Information.
   emitBytesToBuffer(1)
-  if (calculateDistance(curSubblock) === 1) {
-    writeByte(0, curSubblock)
+  if (writer.calculateDistance(curSubblock) === 1) {
+    writer.writeByte(0, curSubblock)
   } else {
-    writeByte(calculateDistance(curSubblock) - 1, curSubblock)
-    writeByte(0)
+    writer.writeByte(writer.calculateDistance(curSubblock) - 1, curSubblock)
+    writer.writeByte(0)
   }
 }

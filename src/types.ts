@@ -54,7 +54,7 @@ export interface Frame {
   lzwMinCodeSize: number
 
   // Image Data - [begin, length][]
-  imageDataPositions: number[][]
+  dataPositions: number[][]
 
   // Extensions (89a)
   application?: Application
@@ -98,3 +98,26 @@ export interface Gif89a extends Gif87a {
 export interface Gif extends Gif89a {
   version: '89a' | '87a'
 }
+
+export type GifEncodeFrameOptions<T = CanvasImageSource | BufferSource | string> = Partial<Frame> & {
+  /** Frame image data */
+  data: T
+}
+
+export type GifEncoderOptions = Omit<Partial<Gif>, 'frames'> & {
+  /** Enable debug mode to view the execution time log. */
+  debug?: boolean
+  /** Worker script url */
+  workerUrl?: string
+  /** Worker number */
+  workerNumber?: number
+  /** Max colors count 2-255 */
+  maxColors?: number
+}
+
+export type GifEncodeOptions<T = CanvasImageSource | BufferSource | string> = GifEncoderOptions & {
+  frames: GifEncodeFrameOptions<T>[]
+
+  format?: 'arrayBuffer' | 'blob'
+}
+

@@ -3,13 +3,13 @@ import { mergeBuffers, resovleSource } from './utils'
 import { lzwDecode } from './lzw-decode'
 import { deinterlace } from './deinterlace'
 import { createWorker } from './create-worker'
-import type { Frame, Gif } from './gif'
+import type { Frame, Gif } from './types'
 
 export interface DecodedFrame {
   width: number
   height: number
   delay: number
-  imageData: Uint8ClampedArray
+  data: Uint8ClampedArray
 }
 
 export interface DecodeFramesOptions {
@@ -65,7 +65,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       localColorTable,
       colorTable,
       lzwMinCodeSize,
-      imageDataPositions,
+      dataPositions,
       graphicControl,
       delay,
       disposal,
@@ -82,7 +82,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
     const transparentIndex = transparent ? localTransparentIndex : -1
 
     const compressedData = mergeBuffers(
-      imageDataPositions.map(
+      dataPositions.map(
         ([begin, length]) => array.subarray(begin, begin + length),
       ),
     )
@@ -145,7 +145,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       width: globalWidth,
       height: globalHeight,
       delay,
-      imageData: pixels.slice(),
+      data: pixels.slice(),
     }
   })
 }

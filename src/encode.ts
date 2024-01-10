@@ -1,14 +1,8 @@
-import { createEncoder } from './create-encoder'
-import type { EncodeOptions } from './options'
+import { Encoder } from './Encoder'
+import type { EncoderOptions } from './Encoder'
 
-export async function encode(options: EncodeOptions): Promise<Uint8Array> {
-  const { frames } = options
-
-  const encoder = createEncoder(options)
-
-  for (let len = frames.length, i = 0; i < len; i++) {
-    await encoder.encode(frames[i])
-  }
-
-  return await encoder.flush()
+export function encode(options: EncoderOptions & { format: 'blob' }): Promise<Blob>
+export function encode(options: EncoderOptions & { format?: 'arrayBuffer' }): Promise<ArrayBuffer>
+export function encode(options: EncoderOptions & { format?: string }): Promise<any> {
+  return new Encoder(options).flush(options.format as any)
 }

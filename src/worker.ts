@@ -1,45 +1,22 @@
-import { createPalette } from 'modern-palette'
 import { decodeFrames } from './decode-frames'
-import { encodeFrame } from './encode-frame'
-import { indexFrames } from './index-frames'
-import { cropFrames } from './crop-frames'
+import { Encoder } from './Encoder'
 
-const palette = createPalette({
-  skipTransparent: false,
-})
+let encoder: Encoder | undefined
 
-self.onmessage = event => {
-  const { id, type, data: req } = event.data
+self.onmessage = async event => {
+  const { id, type, data: options } = event.data
 
-  if (type === 'palette:addSample' && palette) {
-    palette.addSample(req)
-    return self.postMessage({ id, type, data: true })
-  }
-
-  if (type === 'palette:generate' && palette) {
-    palette.generate(req)
-    const data = { ...palette.context }
-    palette.reset()
-    return self.postMessage({ id, type, data })
-  }
-
-  if (type === 'frames:index') {
-    const data = indexFrames(req)
-    return self.postMessage({ id, type, data }, data.map(val => val.imageData.buffer))
-  }
-
-  if (type === 'frames:crop') {
-    const data = cropFrames(req)
-    return self.postMessage({ id, type, data }, data.map(val => val.imageData.buffer))
-  }
-
-  if (type === 'frame:encode') {
-    const data = encodeFrame(req)
-    return self.postMessage({ id, type, data }, [data.buffer])
-  }
-
-  if (type === 'frames:decode') {
-    const data = decodeFrames(req)
-    return self.postMessage({ id, type, data }, data.map(val => val.imageData.buffer))
+  switch (type) {
+    case 'encoder:init':
+      encoder = new Encoder({ ...options, workerUrl: undefined })
+      return self.postMessage({ id, type, data: true })
+    case 'encoder:encode':
+      return self.postMessage({ id, type, data: await encoder?.encode(options) })
+    case 'encoder:flush':
+      return self.postMessage({ id, type, data: await encoder?.flush(options) })
+    case 'frames:decode': {
+      const data = decodeFrames(options)
+      return self.postMessage({ id, type, data }, data.map(val => val.data.buffer))
+    }
   }
 }

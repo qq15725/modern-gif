@@ -1,6 +1,3 @@
-// Constants
-export const PREFIX = '[modern-gif]'
-
 // GIF
 export const SIGNATURE = 'GIF'
 export const VERSIONS = ['87a', '89a']
@@ -14,15 +11,6 @@ export const EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE = 4
 export const EXTENSION_PLAIN_TEXT = 0x01
 export const EXTENSION_PLAIN_TEXT_BLOCK_SIZE = 0x01
 export const TRAILER = 0x3B
-
-// Console
-export const consoleWarn = (...args: any[]) => console.warn(PREFIX, ...args)
-// eslint-disable-next-line no-console
-export const consoleDebug = (...args: any[]) => console.debug(PREFIX, ...args)
-// eslint-disable-next-line no-console
-export const consoleTime = (label: string) => console.time(`${ PREFIX } ${ label }`)
-// eslint-disable-next-line no-console
-export const consoleTimeEnd = (label: string) => console.timeEnd(`${ PREFIX } ${ label }`)
 
 export function mergeBuffers(buffers: Uint8Array[]): Uint8Array {
   const container = new Uint8Array(
@@ -89,35 +77,4 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
     img.onload = () => resolve(img)
     img.onerror = reject
   })
-}
-
-export function cropBuffer(
-  buffer: Uint8ClampedArray,
-  options: {
-    top?: number
-    left?: number
-    width: number
-    height: number
-    rawWidth: number
-    rate?: number
-    callback?: (rawIndex: number) => number | undefined
-  },
-) {
-  const { top = 0, left = 0, width, height, rawWidth, rate = 4, callback } = options
-
-  const croppedBuffer = new Uint8ClampedArray(width * height * rate)
-
-  const startX = left * rate
-  const startY = top * rate
-  const lineSize = width * rate
-  const rawLineSize = rawWidth * rate
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < lineSize; x++) {
-      const index = (startY + y) * rawLineSize + (startX + x)
-      croppedBuffer[y * lineSize + x] = callback?.(index) ?? buffer[index]
-    }
-  }
-
-  return croppedBuffer
 }

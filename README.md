@@ -20,7 +20,7 @@
 
 ## Features
 
-- ⚡️ Encode(or create Encoder), Decode
+- ⚡️ Encode, Decode
 
 - 🎨 Set max colors(2 - 255)
 
