@@ -1,3 +1,12 @@
+## [2.0.1](https://github.com/qq15725/modern-gif/compare/v2.0.0...v2.0.1) (2024-01-10)
+
+
+### Bug Fixes
+
+* UnencodedFrame type (close [#2](https://github.com/qq15725/modern-gif/issues/2)) ([71c8e72](https://github.com/qq15725/modern-gif/commit/71c8e72775c63c58015464c3d8f3e21ecc567e83))
+
+
+
 # [2.0.0](https://github.com/qq15725/modern-gif/compare/v1.1.10...v2.0.0) (2024-01-10)
 
 
