@@ -146,7 +146,7 @@ window.open(URL.createObjectURL(blob))
 
 ## Types
 
-See the [gif.ts](src/gif.ts)
+See the [types.ts](src/types.ts)
 
 ## Encode Options
 

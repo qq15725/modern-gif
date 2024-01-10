@@ -3,7 +3,8 @@ import { Logger } from './Logger'
 import { CropIndexedFrame, EncodeGif, EncodeIndexdFrame, FrameToIndexedFrame } from './transformers'
 import { loadImage, resovleSource } from './utils'
 import { createWorker } from './create-worker'
-import type { EncoderOptions, EncodingFrame, UnencodedFrame } from './types'
+import type { EncoderOptions } from './options'
+import type { EncodingFrame, UnencodedFrame } from './types'
 
 export interface EncoderConfig extends EncoderOptions {
   maxColors: number
