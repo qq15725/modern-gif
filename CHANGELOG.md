@@ -1,3 +1,12 @@
+## [2.0.2](https://github.com/qq15725/modern-gif/compare/v2.0.1...v2.0.2) (2024-01-10)
+
+
+### Bug Fixes
+
+* export options type ([07c84a4](https://github.com/qq15725/modern-gif/commit/07c84a42cc642787ef51ae0f05c316ca62ad60ea))
+
+
+
 ## [2.0.1](https://github.com/qq15725/modern-gif/compare/v2.0.0...v2.0.1) (2024-01-10)
 
 
