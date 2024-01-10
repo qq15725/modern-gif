@@ -1,16 +1,17 @@
 import { Writer } from '../Writer'
 import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from '../utils'
 import { lzwEncode } from '../lzw-encode'
-import type { IndexFramesOutput } from './FrameToIndexedFrame'
+import type { EncoderConfig } from '../Encoder'
+import type { EncodingFrame } from '../types'
 
-export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, IndexFramesOutput> {
+export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, EncodingFrame> {
   protected _rsControler!: ReadableStreamDefaultController<Uint8Array>
 
   readable = new ReadableStream<Uint8Array>({
     start: controler => this._rsControler = controler,
   })
 
-  writable = new WritableStream<IndexFramesOutput>({
+  writable = new WritableStream<EncodingFrame>({
     write: frame => {
       const writer = new Writer()
 
@@ -94,8 +95,12 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Index
 
       this._rsControler.enqueue(writer.toUint8Array())
     },
-    close: () => {
-      this._rsControler.close()
-    },
+    close: () => this._rsControler.close(),
   })
+
+  constructor(
+    protected _config: EncoderConfig,
+  ) {
+    //
+  }
 }

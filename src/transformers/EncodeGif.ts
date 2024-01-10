@@ -1,9 +1,13 @@
 import {
   EXTENSION,
-  EXTENSION_APPLICATION, EXTENSION_APPLICATION_BLOCK_SIZE, SIGNATURE, TRAILER, mergeBuffers,
+  EXTENSION_APPLICATION,
+  EXTENSION_APPLICATION_BLOCK_SIZE,
+  SIGNATURE,
+  TRAILER,
+  mergeBuffers,
 } from '../utils'
 import { Writer } from '../Writer'
-import type { Gif } from '../types'
+import type { EncoderConfig } from '../Encoder'
 
 export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
   protected _rsControler!: ReadableStreamDefaultController<Uint8Array>
@@ -31,7 +35,7 @@ export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
   })
 
   constructor(
-    public options: Omit<Partial<Gif>, 'frames'>,
+    protected _config: EncoderConfig,
   ) {
     //
   }
@@ -41,12 +45,8 @@ export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
       version: '89a',
       looped: true,
       loopCount: 0,
-      width: 0,
-      height: 0,
-      colorTableSize: 0,
-      backgroundColorIndex: 0,
       pixelAspectRatio: 0,
-      ...this.options,
+      ...this._config,
     }
 
     if (gif.width <= 0 || gif.width > 65535) throw new Error('Width invalid.')

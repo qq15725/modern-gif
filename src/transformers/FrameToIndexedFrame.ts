@@ -1,31 +1,26 @@
 import { Finder } from 'modern-palette'
-import type { Frame } from '../types'
+import type { EncoderConfig } from '../Encoder'
+import type { EncodingFrame } from '../types'
 import type { QuantizedColor } from 'modern-palette'
 
-export type IndexFramesInput = Partial<Frame> & { data: ArrayLike<number> }
-
-export type IndexFramesOutput = Partial<Frame> & { data: ArrayLike<number> } & { transparent: boolean }
-
-export class FrameToIndexedFrame implements ReadableWritablePair<IndexFramesOutput, IndexFramesInput> {
-  protected _rsControler!: ReadableStreamDefaultController<IndexFramesOutput>
+export class FrameToIndexedFrame implements ReadableWritablePair<EncodingFrame, EncodingFrame> {
+  protected _rsControler!: ReadableStreamDefaultController<EncodingFrame>
   protected _finder: Finder
 
   constructor(
-    public transparentIndex: number,
-    premultipliedAlpha: boolean,
-    tint: Array<number>,
+    protected _config: EncoderConfig,
     colors: Array<QuantizedColor>,
   ) {
-    this._finder = new Finder(colors, premultipliedAlpha, tint)
+    this._finder = new Finder(colors, _config.premultipliedAlpha, _config.tint)
   }
 
-  readable = new ReadableStream<IndexFramesOutput>({
+  readable = new ReadableStream<EncodingFrame>({
     start: controler => this._rsControler = controler,
   })
 
-  writable = new WritableStream<IndexFramesInput>({
+  writable = new WritableStream<EncodingFrame>({
     write: (frame) => {
-      const transparentIndex = this.transparentIndex
+      const transparentIndex = this._config.backgroundColorIndex
       const pixels = frame.data
       let transparent = false
       const indexes = new Uint8ClampedArray(pixels.length / 4)

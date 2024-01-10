@@ -3,52 +3,9 @@ import { Logger } from './Logger'
 import { CropIndexedFrame, EncodeGif, EncodeIndexdFrame, FrameToIndexedFrame } from './transformers'
 import { loadImage, resovleSource } from './utils'
 import { createWorker } from './create-worker'
-import type { Frame, Gif } from './types'
-
-export interface EncoderOptions extends Partial<Omit<Gif, 'width' | 'height' | 'frames'>> {
-  /**
-   * GIF width
-   */
-  width: number
-
-  /**
-   * GIF height
-   */
-  height: number
-
-  /**
-   * The frames that needs to be encoded
-   */
-  frames?: Array<Partial<Frame> & { data: Uint8ClampedArray }>
-
-  /**
-   * Enable debug mode to view the execution time log.
-   */
-  debug?: boolean
-
-  /**
-   * Worker script url
-   */
-  workerUrl?: string
-
-  /**
-   * Max colors count 2-255
-   */
-  maxColors?: number
-
-  /**
-   * Palette premultipliedAlpha
-   */
-  premultipliedAlpha?: boolean
-
-  /**
-   * Palette tint
-   */
-  tint?: Array<number>
-}
+import type { EncoderOptions, EncodingFrame, UnencodedFrame } from './types'
 
 export interface EncoderConfig extends EncoderOptions {
-  debug: boolean
   maxColors: number
   premultipliedAlpha: boolean
   tint: Array<number>
@@ -57,28 +14,26 @@ export interface EncoderConfig extends EncoderOptions {
 }
 
 export class Encoder {
-  config: EncoderConfig
-  logger: Logger
-  frames: Array<Partial<Frame> & { data: Uint8ClampedArray }> = []
-  palette: Palette
-  protected _encodeId = 0
+  protected _logger: Logger
+  protected _palette: Palette
+  protected _config: EncoderConfig
+  protected _encodingFrames: Array<EncodingFrame> = []
+  protected _encodeUUID = 0
   protected _worker?: ReturnType<typeof createWorker>
 
   constructor(options: EncoderOptions) {
-    this.config = this._resolveOptions(options)
-    this.logger = new Logger(this.config.debug)
-    this.palette = new Palette({
-      maxColors: this.config.maxColors,
-      premultipliedAlpha: this.config.premultipliedAlpha,
-      tint: this.config.tint,
+    this._logger = new Logger(Boolean(options.debug))
+    this._config = this._resolveOptions(options)
+    this._palette = new Palette({
+      maxColors: this._config.maxColors,
+      premultipliedAlpha: this._config.premultipliedAlpha,
+      tint: this._config.tint,
     })
-    if (this.config.workerUrl) {
-      this._worker = createWorker({ workerUrl: this.config.workerUrl })
+    if (this._config.workerUrl) {
+      this._worker = createWorker({ workerUrl: this._config.workerUrl })
       this._worker.call('encoder:init', options)
     } else {
-      this.config.frames?.forEach(frame => {
-        this.encode(frame)
-      })
+      this._config.frames?.forEach(frame => this.encode(frame))
     }
   }
 
@@ -97,7 +52,6 @@ export class Encoder {
       colorTableSize = 256,
       backgroundColorIndex = colorTableSize - 1,
       maxColors = colorTableSize - 1,
-      debug = false,
       premultipliedAlpha = false,
       tint = [0xFF, 0xFF, 0xFF],
     } = options
@@ -107,13 +61,12 @@ export class Encoder {
       colorTableSize,
       backgroundColorIndex,
       maxColors,
-      debug,
       premultipliedAlpha,
       tint,
     }
   }
 
-  async encode(frame: Partial<Frame> & { data: CanvasImageSource | BufferSource | string }): Promise<void> {
+  async encode(frame: UnencodedFrame): Promise<void> {
     if (this._worker) {
       let transfer: any | undefined
       if (ArrayBuffer.isView(frame.data)) {
@@ -124,18 +77,18 @@ export class Encoder {
       return this._worker.call('encoder:encode', frame, transfer)
     }
 
-    const _encodeId = this._encodeId
-    this._encodeId++
+    const id = this._encodeUUID
+    this._encodeUUID++
 
     const {
-      width: frameWidth = this.config.width,
-      height: frameHeight = this.config.height,
+      width: frameWidth = this._config.width,
+      height: frameHeight = this._config.height,
     } = frame
 
     let { data } = frame
 
     try {
-      this.logger.time(`palette:sample-${ _encodeId }`)
+      this._logger.time(`palette:sample-${ id }`)
       data = typeof data === 'string'
         ? await loadImage(data)
         : data
@@ -145,16 +98,16 @@ export class Encoder {
         height: frameHeight,
       })
 
-      this.frames.push({
+      this._encodingFrames.push({
         ...frame,
         width: frameWidth,
         height: frameHeight,
         data: data as any,
       })
 
-      this.palette.addSample(data)
+      this._palette.addSample(data)
     } finally {
-      this.logger.timeEnd(`palette:sample-${ _encodeId }`)
+      this._logger.timeEnd(`palette:sample-${ id }`)
     }
   }
 
@@ -165,55 +118,43 @@ export class Encoder {
       return this._worker.call('encoder:flush', format)
     }
 
-    this.logger.time('palette:generate')
-    const colors = await this.palette.generate()
-    this.logger.timeEnd('palette:generate')
+    this._logger.time('palette:generate')
+    const colors = await this._palette.generate()
+    this._logger.timeEnd('palette:generate')
 
     const colorTable = colors.map(color => [color.rgb.r, color.rgb.g, color.rgb.b])
-    while (colorTable.length < this.config.colorTableSize) {
+    while (colorTable.length < this._config.colorTableSize) {
       colorTable.push([0, 0, 0])
     }
 
-    this.logger.debug('palette:maxColors', this.config.maxColors)
+    this._logger.debug('palette:maxColors', this._config.maxColors)
     // eslint-disable-next-line no-console
-    this.config.debug && console.debug(
+    this._logger.isDebug && console.debug(
       colors.map(() => '%c ').join(''),
       ...colors.map(color => `margin: 1px; background: ${ color.hex }`),
     )
 
-    this.logger.time('encode')
+    this._logger.time('encode')
     const output = await new Promise<Uint8Array>(resolve => {
       new ReadableStream({
         start: controller => {
-          this.frames.forEach(frame => {
+          this._encodingFrames.forEach(frame => {
             controller.enqueue(frame)
           })
           controller.close()
         },
       })
-        .pipeThrough(
-          new FrameToIndexedFrame(
-            this.config.backgroundColorIndex,
-            this.config.premultipliedAlpha,
-            this.config.tint,
-            colors,
-          ),
-        )
-        .pipeThrough(new CropIndexedFrame(this.config.backgroundColorIndex))
-        .pipeThrough(new EncodeIndexdFrame())
-        .pipeThrough(new EncodeGif({
-          ...this.config,
-          colorTable,
-        }))
-        .pipeTo(new WritableStream({
-          write: chunk => resolve(chunk),
-        }))
+        .pipeThrough(new FrameToIndexedFrame(this._config, colors))
+        .pipeThrough(new CropIndexedFrame(this._config))
+        .pipeThrough(new EncodeIndexdFrame(this._config))
+        .pipeThrough(new EncodeGif({ ...this._config, colorTable }))
+        .pipeTo(new WritableStream({ write: chunk => resolve(chunk) }))
     })
-    this.logger.timeEnd('encode')
+    this._logger.timeEnd('encode')
 
     // reset
-    this.frames = []
-    this._encodeId = 0
+    this._encodingFrames = []
+    this._encodeUUID = 0
 
     switch (format) {
       case 'blob':

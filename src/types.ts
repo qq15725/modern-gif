@@ -68,6 +68,10 @@ export interface Frame {
   disposal: GraphicControl['disposal']
 }
 
+export type EncodingFrame = Partial<Frame> & { data: Uint8ClampedArray; transparent?: boolean }
+
+export type UnencodedFrame = Partial<Frame> & { data: CanvasImageSource | BufferSource | string }
+
 export interface Gif87a {
   // Logical Screen Descriptor
   width: number
@@ -99,25 +103,21 @@ export interface Gif extends Gif89a {
   version: '89a' | '87a'
 }
 
-export type GifEncodeFrameOptions<T = CanvasImageSource | BufferSource | string> = Partial<Frame> & {
-  /** Frame image data */
-  data: T
-}
-
-export type GifEncoderOptions = Omit<Partial<Gif>, 'frames'> & {
-  /** Enable debug mode to view the execution time log. */
+export interface EncoderOptions extends Partial<Omit<Gif, 'width' | 'height' | 'frames'>> {
+  /** GIF width */
+  width: number
+  /** GIF height */
+  height: number
+  /** The frames that needs to be encoded */
+  frames?: Array<UnencodedFrame>
+  /** Enable debug mode to view the execution time log */
   debug?: boolean
   /** Worker script url */
   workerUrl?: string
-  /** Worker number */
-  workerNumber?: number
   /** Max colors count 2-255 */
   maxColors?: number
+  /** Palette premultipliedAlpha */
+  premultipliedAlpha?: boolean
+  /** Palette tint */
+  tint?: Array<number>
 }
-
-export type GifEncodeOptions<T = CanvasImageSource | BufferSource | string> = GifEncoderOptions & {
-  frames: GifEncodeFrameOptions<T>[]
-
-  format?: 'arrayBuffer' | 'blob'
-}
-

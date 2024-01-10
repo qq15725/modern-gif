@@ -1,21 +1,20 @@
-import type { IndexFramesOutput } from './FrameToIndexedFrame'
+import type { EncoderConfig } from '../Encoder'
+import type { EncodingFrame } from '../types'
 
-export type CropFramesOutput = IndexFramesOutput
-
-export class CropIndexedFrame implements ReadableWritablePair<CropFramesOutput, IndexFramesOutput> {
-  protected _rsControler!: ReadableStreamDefaultController<CropFramesOutput>
+export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, EncodingFrame> {
+  protected _rsControler!: ReadableStreamDefaultController<EncodingFrame>
   protected _frames: Array<any> = []
 
-  readable = new ReadableStream<CropFramesOutput>({
+  readable = new ReadableStream<EncodingFrame>({
     start: controler => this._rsControler = controler,
   })
 
-  writable = new WritableStream<IndexFramesOutput>({
+  writable = new WritableStream<EncodingFrame>({
     write: frame => {
       this._frames.push(frame)
     },
     close: () => {
-      const transparentIndex = this.transparentIndex
+      const transparentIndex = this._config.backgroundColorIndex
       let lastIndexes: ArrayLike<number> | undefined
       this._frames.forEach((frame, index) => {
         const {
@@ -173,7 +172,7 @@ export class CropIndexedFrame implements ReadableWritablePair<CropFramesOutput, 
           graphicControl: {
             ...frame.graphicControl,
             transparent: true,
-            transparentIndex: this.transparentIndex,
+            transparentIndex,
           } as any,
         })
       })
@@ -182,7 +181,7 @@ export class CropIndexedFrame implements ReadableWritablePair<CropFramesOutput, 
   })
 
   constructor(
-    public transparentIndex: number,
+    protected _config: EncoderConfig,
   ) {
     //
   }
