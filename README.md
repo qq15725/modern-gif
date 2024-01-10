@@ -49,8 +49,8 @@ const output = await encode({
   width: 200, height: 200,
   frames: [
     // CanvasImageSource | BufferSource | string
-    { imageData: '/example1.png', delay: 100 },
-    { imageData: '/example2.png', delay: 100 }
+    { data: '/example1.png', delay: 100 },
+    { data: '/example2.png', delay: 100 }
   ],
 })
 
@@ -79,7 +79,7 @@ frames.forEach(frame => {
   canvas.width = frame.width
   canvas.height = frame.height
   canvas.getContext('2d').putImageData(
-    new ImageData(frame.imageData, frame.width, frame.height),
+    new ImageData(frame.data, frame.width, frame.height),
     0, 0,
   )
   document.body.append(canvas)
@@ -106,7 +106,7 @@ const gif = decode(buffer)
 const frames = await decodeFrames(buffer, { workerUrl })
 const output = await encode({
   // workerUrl is optional
-  workerUrl, workerNumber: 2,
+  workerUrl,
   width: gif.width, height: gif.height,
   frames,
   // lossy compression 2 - 255
@@ -129,8 +129,8 @@ window.open(URL.createObjectURL(blob))
     width: 200, height: 200,
     frames: [
       // CanvasImageSource | BufferSource | string
-      { imageData: '/example1.png', delay: 100 },
-      { imageData: '/example2.png', delay: 100 }
+      { data: '/example1.png', delay: 100 },
+      { data: '/example2.png', delay: 100 }
     ],
   }).then(output => {
     const blob = new Blob([output], { type: 'image/gif' })
