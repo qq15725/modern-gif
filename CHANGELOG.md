@@ -1,3 +1,12 @@
+# [2.0.0](https://github.com/qq15725/modern-gif/compare/v1.1.10...v2.0.0) (2024-01-10)
+
+
+### Features
+
+* streaming style coding ([44e5777](https://github.com/qq15725/modern-gif/commit/44e577729311130d9cad31547dcfc08b93354b32))
+
+
+
 ## [1.1.10](https://github.com/qq15725/modern-gif/compare/v1.1.9...v1.1.10) (2023-10-23)
 
 
