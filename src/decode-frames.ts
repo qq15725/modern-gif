@@ -70,6 +70,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       delay,
       disposal,
     } = frame
+    const previousDisposal = previousFrame?.disposal
 
     const bottom = top + height
 
@@ -93,28 +94,16 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       colorIndexes = deinterlace(colorIndexes, width)
     }
 
-    if (disposal === 3) {
-      if (previousPixels) {
-        pixels = previousPixels?.slice()
-      }
-    } else {
-      const previousDisposal = previousFrame?.disposal
-      if (previousDisposal === 0 || previousDisposal === 2) {
-        const { left, top, width, height } = previousFrame!
-        const bottom = top + height
-        for (let y = top; y < bottom; y++) {
-          const globalOffset = y * globalWidth + left
-          const localOffset = (y - top) * width
-          for (let x = 0; x < width; x++) {
-            const colorIndex = colorIndexes[localOffset + x]
-            if (
-              previousDisposal === 2
-              || (colorIndex !== transparentIndex)
-            ) {
-              const index = (globalOffset + x) * 4
-              pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
-            }
-          }
+    if (previousDisposal === 3) {
+      pixels = previousPixels.slice()
+    } else if (previousDisposal === 2) {
+      const { left, top, width, height } = previousFrame!
+      const bottom = top + height
+      for (let y = top; y < bottom; y++) {
+        const globalOffset = y * globalWidth + left
+        for (let x = 0; x < width; x++) {
+          const index = (globalOffset + x) * 4
+          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
         }
       }
     }
@@ -124,18 +113,20 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
       const localOffset = (y - top) * width
       for (let x = 0; x < width; x++) {
         const colorIndex = colorIndexes[localOffset + x]
+        const index = (globalOffset + x) * 4
         if (colorIndex !== transparentIndex) {
           const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
-          const index = (globalOffset + x) * 4
           pixels[index] = r
           pixels[index + 1] = g
           pixels[index + 2] = b
           pixels[index + 3] = 255
+        } else if (previousDisposal === 2) {
+          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
         }
       }
     }
 
-    if (hasDisposal3 && (disposal === 0 || disposal === 1)) {
+    if (hasDisposal3 && disposal !== 1 && disposal !== 3) {
       previousPixels = pixels.slice()
     }
 
