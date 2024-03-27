@@ -1,3 +1,12 @@
+## [2.0.3](https://github.com/qq15725/modern-gif/compare/v2.0.2...v2.0.3) (2024-03-27)
+
+
+### Bug Fixes
+
+* decode of disposal ([4f75a72](https://github.com/qq15725/modern-gif/commit/4f75a727173d82ce709a678b2dfe44adb1ce16c6))
+
+
+
 ## [2.0.2](https://github.com/qq15725/modern-gif/compare/v2.0.1...v2.0.2) (2024-01-10)
 
 
