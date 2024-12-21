@@ -1,5 +1,5 @@
-export function deinterlace(pixels: number[], width: number) {
-  const newPixels = new Array(pixels.length)
+export function deinterlace(pixels: number[], width: number): number[] {
+  const newPixels: number[] = Array.from({ length: pixels.length })
   const rows = pixels.length / width
   // See appendix E.
   const offsets = [0, 4, 2, 1]

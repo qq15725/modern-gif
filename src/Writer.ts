@@ -22,7 +22,8 @@ export class Writer {
   writeByte(val: number, cursor?: WriterCursor): void {
     if (cursor) {
       this._chunks[cursor[0]].setUint8(cursor[1], val)
-    } else {
+    }
+    else {
       if (this._chunkOffset >= this._chunkByteLength) {
         this._chunks[++this._chunkIndex] = this._createChunk()
         this._chunkOffset = 0
@@ -36,7 +37,7 @@ export class Writer {
   }
 
   writeString(value: string): void {
-    value.split('').forEach(char => {
+    value.split('').forEach((char) => {
       this.writeByte(char.charCodeAt(0))
     })
   }
@@ -53,7 +54,7 @@ export class Writer {
     this._chunks[this._chunkIndex] = new DataView(this._chunks[this._chunkIndex].buffer.slice(0, this._chunkOffset))
     const data = new Uint8Array(this._chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
     let offset = 0
-    this._chunks.forEach(chunk => {
+    this._chunks.forEach((chunk) => {
       data.set(new Uint8Array(chunk.buffer), offset)
       offset += chunk.byteLength
     })

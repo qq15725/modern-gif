@@ -1,3 +1,5 @@
+import type { Application, Frame, Gif, GraphicControl } from './types'
+import { Reader } from './Reader'
 import {
   EXTENSION,
   EXTENSION_APPLICATION,
@@ -12,14 +14,12 @@ import {
   TRAILER,
   VERSIONS,
 } from './utils'
-import { Reader } from './Reader'
-import type { Application, Frame, Gif, GraphicControl } from './types'
 
 export function decode(source: BufferSource): Gif {
   const gif = {} as Gif
 
   const reader = new Reader(source)
-  const createFrame = () => ({ index: 0, delay: 100, disposal: 0 }) as Frame
+  const createFrame = (): Frame => ({ index: 0, delay: 100, disposal: 0 }) as Frame
 
   // Header
   const signature = reader.readString(3)
@@ -35,10 +35,10 @@ export function decode(source: BufferSource): Gif {
   // ↓ <Packed Fields>
   const bits = reader.readBits()
   gif.globalColorTable = Boolean(bits[0])
-  gif.colorResoluTion = (parseInt(bits.slice(1, 4).join(''), 2) + 1) as any
+  gif.colorResoluTion = (Number.parseInt(bits.slice(1, 4).join(''), 2) + 1) as any
   gif.colorTableSorted = Boolean(bits[4])
-  const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
-  gif.colorTableSize = Math.pow(2, colorTableSize + 1)
+  const colorTableSize = Number.parseInt(bits.slice(5, 8).join(''), 2)
+  gif.colorTableSize = 2 ** (colorTableSize + 1)
   // ↑ <Packed Fields>
   gif.backgroundColorIndex = reader.readByte()
   gif.pixelAspectRatio = reader.readByte()
@@ -47,7 +47,8 @@ export function decode(source: BufferSource): Gif {
   if (gif.globalColorTable) {
     if (gif.colorTableSize) {
       gif.colorTable = reader.readColorTable(gif.colorTableSize)
-    } else {
+    }
+    else {
       reader.readSubBlock()
     }
   }
@@ -72,9 +73,9 @@ export function decode(source: BufferSource): Gif {
       frame.localColorTable = Boolean(bits[0])
       frame.interlaced = Boolean(bits[1])
       frame.colorTableSorted = Boolean(bits[2])
-      frame.reserved = parseInt(bits.slice(3, 5).join(''), 2) as any
-      const colorTableSize = parseInt(bits.slice(5, 8).join(''), 2)
-      frame.colorTableSize = Math.pow(2, colorTableSize + 1)
+      frame.reserved = Number.parseInt(bits.slice(3, 5).join(''), 2) as any
+      const colorTableSize = Number.parseInt(bits.slice(5, 8).join(''), 2)
+      frame.colorTableSize = 2 ** (colorTableSize + 1)
       // ↑ <Packed Fields>
 
       // Local Color Table
@@ -89,7 +90,8 @@ export function decode(source: BufferSource): Gif {
       frame.dataPositions = []
       while (true) {
         const length = reader.readByte()
-        if (length === 0) break
+        if (length === 0)
+          break
         const offset = reader.offset
         frame.dataPositions.push([offset, length])
         reader.offset = offset + length
@@ -106,13 +108,14 @@ export function decode(source: BufferSource): Gif {
       extensionFlags.push(extensionFlag)
 
       if (extensionFlag === EXTENSION_APPLICATION) {
-        if (reader.readByte() !== EXTENSION_APPLICATION_BLOCK_SIZE) continue
+        if (reader.readByte() !== EXTENSION_APPLICATION_BLOCK_SIZE)
+          continue
         const application: Application = {
           identifier: reader.readString(8),
           code: reader.readString(3),
           data: [],
         }
-        if (`${ application.identifier }${ application.code }` === 'NETSCAPE2.0') {
+        if (`${application.identifier}${application.code}` === 'NETSCAPE2.0') {
           if (reader.readByte() === 3) {
             gif.looped = Boolean(reader.readByte())
             gif.loopCount = reader.readUnsigned()
@@ -129,12 +132,13 @@ export function decode(source: BufferSource): Gif {
       }
 
       if (extensionFlag === EXTENSION_GRAPHIC_CONTROL) {
-        if (reader.readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE) continue
+        if (reader.readByte() !== EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE)
+          continue
         const bits = reader.readBits()
         const graphicControl: GraphicControl = {
           // ↓ <Packed Fields>
-          reserved: parseInt(bits.slice(0, 3).join(''), 2) as any,
-          disposal: parseInt(bits.slice(3, 6).join(''), 2) as any,
+          reserved: Number.parseInt(bits.slice(0, 3).join(''), 2) as any,
+          disposal: Number.parseInt(bits.slice(3, 6).join(''), 2) as any,
           userInput: Boolean(bits[6]),
           transparent: Boolean(bits[7]),
           // ↑ <Packed Fields>
@@ -150,7 +154,8 @@ export function decode(source: BufferSource): Gif {
       }
 
       if (extensionFlag === EXTENSION_PLAIN_TEXT) {
-        if (reader.readByte() !== EXTENSION_PLAIN_TEXT_BLOCK_SIZE) continue
+        if (reader.readByte() !== EXTENSION_PLAIN_TEXT_BLOCK_SIZE)
+          continue
         frame.plainText = {
           left: reader.readUnsigned(),
           top: reader.readUnsigned(),
@@ -166,19 +171,20 @@ export function decode(source: BufferSource): Gif {
       }
 
       console.warn(
-        `Unknown extension block: 0x${ extensionFlag.toString(16) }`,
-        flags.slice(0, flags.length - 1).map(val => `0x${ val.toString(16) }`),
-        extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${ val.toString(16) }`),
+        `Unknown extension block: 0x${extensionFlag.toString(16)}`,
+        flags.slice(0, flags.length - 1).map(val => `0x${val.toString(16)}`),
+        extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${val.toString(16)}`),
       )
       continue
     }
 
-    if (flag === TRAILER) break
+    if (flag === TRAILER)
+      break
 
     console.warn(
-      `Unknown block: 0x${ flag.toString(16) }`,
-      flags.slice(0, flags.length - 1).map(val => `0x${ val.toString(16) }`),
-      extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${ val.toString(16) }`),
+      `Unknown block: 0x${flag.toString(16)}`,
+      flags.slice(0, flags.length - 1).map(val => `0x${val.toString(16)}`),
+      extensionFlags.slice(0, extensionFlags.length - 1).map(val => `0x${val.toString(16)}`),
     )
   }
 

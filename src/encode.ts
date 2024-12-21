@@ -1,5 +1,5 @@
-import { Encoder } from './Encoder'
 import type { EncoderOptions } from './options'
+import { Encoder } from './Encoder'
 
 export function encode(options: EncoderOptions & { format: 'blob' }): Promise<Blob>
 export function encode(options: EncoderOptions & { format?: 'arrayBuffer' }): Promise<ArrayBuffer>

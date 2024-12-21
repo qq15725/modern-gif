@@ -1,6 +1,6 @@
 import type { Writer } from './Writer'
 
-export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: Writer) {
+export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: Writer): void {
   writer.writeByte(minCodeSize)
   let curSubblock = writer.cursor
   writer.writeByte(0)
@@ -12,7 +12,7 @@ export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: 
   let curShift = 0
   let cur = 0
 
-  function emitBytesToBuffer(bitBlockSize: number) {
+  function emitBytesToBuffer(bitBlockSize: number): void {
     while (curShift >= bitBlockSize) {
       writer.writeByte(cur & 0xFF)
       cur >>= 8
@@ -25,7 +25,7 @@ export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: 
     }
   }
 
-  function emitCode(c: number) {
+  function emitCode(c: number): void {
     cur |= c << curShift
     curShift += curCodeSize
     emitBytesToBuffer(8)
@@ -60,12 +60,15 @@ export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: 
         nextCode = eoiCode + 1
         curCodeSize = minCodeSize + 1
         codeTable = {}
-      } else {
-        if (nextCode >= (1 << curCodeSize)) ++curCodeSize
+      }
+      else {
+        if (nextCode >= (1 << curCodeSize))
+          ++curCodeSize
         codeTable[curKey] = nextCode++ // Insert into code table.
       }
       ibCode = k // Index buffer to single input k.
-    } else {
+    }
+    else {
       ibCode = curCode // Index buffer to sequence in code table.
     }
   }
@@ -74,7 +77,8 @@ export function lzwEncode(minCodeSize: number, data: ArrayLike<number>, writer: 
   emitBytesToBuffer(1)
   if (writer.calculateDistance(curSubblock) === 1) {
     writer.writeByte(0, curSubblock)
-  } else {
+  }
+  else {
     writer.writeByte(writer.calculateDistance(curSubblock) - 1, curSubblock)
     writer.writeByte(0)
   }

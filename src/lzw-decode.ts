@@ -1,13 +1,13 @@
-export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: number) {
+export function lzwDecode(minCodeSize: number, data: Uint8Array, pixelCount: number): number[] {
   const MAX_STACK_SIZE = 4096
   const nullCode = -1
   const npix = pixelCount
   let available, codeMask, codeSize, inCode, oldCode, code, i
 
-  const dstPixels = new Array(pixelCount)
-  const prefix = new Array(MAX_STACK_SIZE)
-  const suffix = new Array(MAX_STACK_SIZE)
-  const pixelStack = new Array(MAX_STACK_SIZE + 1)
+  const dstPixels: number[] = Array.from({ length: pixelCount })
+  const prefix: number[] = Array.from({ length: MAX_STACK_SIZE })
+  const suffix: number[] = Array.from({ length: MAX_STACK_SIZE })
+  const pixelStack: number[] = Array.from({ length: MAX_STACK_SIZE + 1 })
 
   // Initialize GIF data stream decoder.
   const dataSize = minCodeSize

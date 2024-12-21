@@ -2,7 +2,7 @@
   "name": "modern-gif",
   "type": "module",
   "version": "2.0.3",
-  "packageManager": "pnpm@7.26.2",
+  "packageManager": "pnpm@9.15.1",
   "description": "Fastest GIF decoder / encoder. using TypeScript.",
   "author": "wxm",
   "license": "MIT",
@@ -22,55 +22,68 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./types/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     },
     "./worker": {
-      "types": "./types/worker.d.ts",
-      "require": "./dist/worker.js",
-      "import": "./dist/worker.js"
+      "types": "./worker.d.ts",
+      "import": "./dist/worker.js",
+      "require": "./dist/worker.js"
     },
     "./*": "./*"
   },
-  "main": "dist/index.mjs",
-  "module": "dist/index.mjs",
-  "types": "types/index.d.ts",
-  "browser": "dist/index.js",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "browser": "./dist/index.js",
   "typesVersions": {
     "*": {
       "*": [
-        "./types/*",
-        "./types/index.d.ts"
+        "./dist/*",
+        "./dist/index.d.ts"
       ]
     }
   },
   "files": [
     "dist",
-    "types"
+    "worker.d.ts"
   ],
   "scripts": {
-    "dev": "vite docs",
+    "dev": "vite",
     "lint": "eslint src",
-    "test": "vitest --no-threads --no-isolate",
+    "lint:fix": "eslint src --fix",
+    "test": "vitest --no-isolate",
+    "coverage": "vitest run --coverage",
+    "build:lib": "vite build && unbuild",
     "build:worker": "vite build --config vite.worker.config.ts",
-    "build": "vite build && pnpm build:worker && tsc --project tsconfig.build.json",
-    "build:docs": "pnpm build:worker && vite build docs",
+    "build": "pnpm build:lib && pnpm build:worker",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
-    "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
-  },
-  "devDependencies": {
-    "@qq15725/eslint-config": "^1.1.0",
-    "@types/dom-webcodecs": "^0.1.7",
-    "@types/node": "^18.16.12",
-    "bumpp": "^8.2.1",
-    "conventional-changelog-cli": "^2.2.2",
-    "eslint": "^8.40.0",
-    "typescript": "^4.9.5",
-    "vite": "^4.3.7",
-    "vitest": "^0.31.1"
+    "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag",
+    "typecheck": "tsc --noEmit",
+    "prepare": "simple-git-hooks"
   },
   "dependencies": {
     "modern-palette": "^2.0.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.7.1",
+    "@types/dom-webcodecs": "^0.1.7",
+    "@types/node": "^22.6.1",
+    "bumpp": "^9.8.1",
+    "conventional-changelog-cli": "^5.0.0",
+    "eslint": "^9.14.0",
+    "lint-staged": "^15.2.10",
+    "simple-git-hooks": "^2.11.1",
+    "typescript": "^5.7.2",
+    "unbuild": "^3.0.1",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint src --fix"
   }
 }

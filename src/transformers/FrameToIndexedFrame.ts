@@ -1,7 +1,7 @@
-import { Finder } from 'modern-palette'
+import type { QuantizedColor } from 'modern-palette'
 import type { EncoderConfig } from '../Encoder'
 import type { EncodingFrame } from '../types'
-import type { QuantizedColor } from 'modern-palette'
+import { Finder } from 'modern-palette'
 
 export class FrameToIndexedFrame implements ReadableWritablePair<EncodingFrame, EncodingFrame> {
   protected _rsControler!: ReadableStreamDefaultController<EncodingFrame>
@@ -28,7 +28,8 @@ export class FrameToIndexedFrame implements ReadableWritablePair<EncodingFrame, 
         if (pixels[i + 3] === 0) {
           indexes[i / 4] = transparentIndex
           transparent = true
-        } else {
+        }
+        else {
           indexes[i / 4] = this._finder.findNearestIndex(
             pixels[i],
             pixels[i + 1],

@@ -1,9 +1,16 @@
+import type { Gif } from './types'
 import { deinterlace } from './deinterlace'
 import { lzwDecode } from './lzw-decode'
 import { mergeBuffers, resovleSource } from './utils'
-import type { Gif } from './types'
 
-export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: number) {
+export interface DecodedUndisposedFrame {
+  width: number
+  height: number
+  delay: number
+  data: Uint8ClampedArray
+}
+
+export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: number): DecodedUndisposedFrame {
   const array = resovleSource(source, 'uint8Array')
 
   const {
@@ -14,7 +21,7 @@ export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: num
   const frame = frames[index]
 
   if (!frame) {
-    throw new Error(`This index ${ index } does not exist in frames`)
+    throw new Error(`This index ${index} does not exist in frames`)
   }
 
   const {
@@ -52,7 +59,8 @@ export function decodeUndisposedFrame(source: BufferSource, gif: Gif, index: num
   const data = new Uint8ClampedArray(width * height * 4)
   for (let len = colorIndexes.length, i = 0; i < len; i++) {
     const colorIndex = colorIndexes[i]
-    if (colorIndex === transparentIndex) continue
+    if (colorIndex === transparentIndex)
+      continue
     const [r, g, b] = palette?.[colorIndex] ?? [0, 0, 0]
     const index = i * 4
     data[index] = r

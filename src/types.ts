@@ -68,7 +68,7 @@ export interface Frame {
   disposal: GraphicControl['disposal']
 }
 
-export type EncodingFrame = Partial<Frame> & { data: Uint8ClampedArray; transparent?: boolean }
+export type EncodingFrame = Partial<Frame> & { data: Uint8ClampedArray, transparent?: boolean }
 
 export type UnencodedFrame = Partial<Frame> & { data: CanvasImageSource | BufferSource | string }
 

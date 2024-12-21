@@ -10,7 +10,7 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
   })
 
   writable = new WritableStream<EncodingFrame>({
-    write: frame => {
+    write: (frame) => {
       this._frames.push(frame)
     },
     close: () => {
@@ -42,7 +42,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                 break
               }
             }
-            if (!isTrans) break
+            if (!isTrans)
+              break
             top++
           }
 
@@ -55,7 +56,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                 break
               }
             }
-            if (!isTrans) break
+            if (!isTrans)
+              break
             bottom--
           }
 
@@ -68,7 +70,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                 break
               }
             }
-            if (!isTrans) break
+            if (!isTrans)
+              break
             left++
           }
 
@@ -81,10 +84,12 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                 break
               }
             }
-            if (!isTrans) break
+            if (!isTrans)
+              break
             right--
           }
-        } else {
+        }
+        else {
           if (lastIndexes) {
             // skip common lines
             while (top < bottom) {
@@ -96,7 +101,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                   break
                 }
               }
-              if (!sameLine) break
+              if (!sameLine)
+                break
               top++
             }
             while (bottom > top) {
@@ -108,13 +114,15 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                   break
                 }
               }
-              if (!sameLine) break
+              if (!sameLine)
+                break
               bottom--
             }
 
             if (top === bottom) {
               left = right
-            } else {
+            }
+            else {
               // skip common columns
               while (left < right) {
                 let sameColumn = true
@@ -125,7 +133,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                     break
                   }
                 }
-                if (!sameColumn) break
+                if (!sameColumn)
+                  break
                 left++
               }
               while (right > left) {
@@ -137,7 +146,8 @@ export class CropIndexedFrame implements ReadableWritablePair<EncodingFrame, Enc
                     break
                   }
                 }
-                if (!sameColumn) break
+                if (!sameColumn)
+                  break
                 right--
               }
             }

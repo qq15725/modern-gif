@@ -38,7 +38,8 @@ export class Reader {
     const block: number[] = []
     while (true) {
       const val = this.readByte()
-      if (val === 0 && this._view.getUint8(this.offset) !== 0) break
+      if (val === 0 && this._view.getUint8(this.offset) !== 0)
+        break
       block.push(val)
     }
     return block

@@ -31,23 +31,37 @@ interface ResovleSourceOptions {
 export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array', options?: ResovleSourceOptions): Uint8Array
 export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8ClampedArray', options?: ResovleSourceOptions): Uint8ClampedArray
 export function resovleSource(source: CanvasImageSource | BufferSource, output: 'dataView', options?: ResovleSourceOptions): DataView
-export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array' | 'uint8ClampedArray' | 'dataView', options?: ResovleSourceOptions) {
+export function resovleSource(source: CanvasImageSource | BufferSource, output: 'uint8Array' | 'uint8ClampedArray' | 'dataView', options?: ResovleSourceOptions): any {
   let buffer: ArrayBuffer
   if (ArrayBuffer.isView(source)) {
-    buffer = source.buffer
-  } else if (source instanceof ArrayBuffer) {
+    buffer = source.buffer as ArrayBuffer
+  }
+  else if (source instanceof ArrayBuffer) {
     buffer = source
-  } else {
+  }
+  else {
     const canvas = document.createElement('canvas')
     const { width, height } = options || {}
     const context2d = canvas.getContext('2d')
     if (!context2d) {
       throw new Error('Failed to create canvas context2d')
     }
-    canvas.width = width ?? (typeof source.width === 'number' ? source.width : source.width.baseVal.value)
-    canvas.height = height ?? (typeof source.height === 'number' ? source.height : source.height.baseVal.value)
+    canvas.width = width ?? (
+      'width' in source
+        ? typeof source.width === 'number'
+          ? source.width
+          : source.width.baseVal.value
+        : 0
+    )
+    canvas.height = height ?? (
+      'height' in source
+        ? typeof source.height === 'number'
+          ? source.height
+          : source.height.baseVal.value
+        : 0
+    )
     context2d.drawImage(source, 0, 0, canvas.width, canvas.height)
-    buffer = context2d.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+    buffer = context2d.getImageData(0, 0, canvas.width, canvas.height).data.buffer as ArrayBuffer
   }
 
   switch (output) {

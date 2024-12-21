@@ -1,13 +1,13 @@
+import type { EncoderConfig } from '../Encoder'
 import {
   EXTENSION,
   EXTENSION_APPLICATION,
   EXTENSION_APPLICATION_BLOCK_SIZE,
+  mergeBuffers,
   SIGNATURE,
   TRAILER,
-  mergeBuffers,
 } from '../utils'
 import { Writer } from '../Writer'
-import type { EncoderConfig } from '../Encoder'
 
 export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
   protected _rsControler!: ReadableStreamDefaultController<Uint8Array>
@@ -40,7 +40,7 @@ export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
     //
   }
 
-  protected _encodeHeader() {
+  protected _encodeHeader(): Uint8Array {
     const gif = {
       version: '89a',
       looped: true,
@@ -49,8 +49,10 @@ export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
       ...this._config,
     }
 
-    if (gif.width <= 0 || gif.width > 65535) throw new Error('Width invalid.')
-    if (gif.height <= 0 || gif.height > 65535) throw new Error('Height invalid.')
+    if (gif.width <= 0 || gif.width > 65535)
+      throw new Error('Width invalid.')
+    if (gif.height <= 0 || gif.height > 65535)
+      throw new Error('Height invalid.')
 
     // Handling of global color table size
     let colorTableSize = 0
@@ -86,7 +88,7 @@ export class EncodeGif implements ReadableWritablePair<Uint8Array, Uint8Array> {
     // 2-4 : color resolution = 7
     // 5   : global color table sort flag = 0
     // 6-8 : global color table size
-    writer.writeByte(parseInt(`${ gif.colorTableSize ? 1 : 0 }1110${ gif.colorTableSize.toString(2).padStart(3, '0') }`, 2))
+    writer.writeByte(Number.parseInt(`${gif.colorTableSize ? 1 : 0}1110${gif.colorTableSize.toString(2).padStart(3, '0')}`, 2))
     writer.writeByte(gif.backgroundColorIndex) // background color index
     writer.writeByte(gif.pixelAspectRatio) // pixel aspect ratio - assume 1:1
 

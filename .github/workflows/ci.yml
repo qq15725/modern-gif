@@ -26,7 +26,7 @@ jobs:
   test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    name: "Build&Test: node-18, ubuntu-latest"
+    name: 'Build&Test: node-18, ubuntu-latest'
     steps:
       - name: ⤵️ Checkout
         uses: actions/checkout@v3
@@ -53,7 +53,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: "pnpm"
+          cache: pnpm
 
       - name: 🚧 Install deps
         if: steps.changed-files.outputs.only_changed != 'true'
@@ -70,7 +70,7 @@ jobs:
   lint:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    name: "Lint: node-18, ubuntu-latest"
+    name: 'Lint: node-18, ubuntu-latest'
     steps:
       - name: ⤵️ Checkout
         uses: actions/checkout@v3
@@ -82,7 +82,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: "pnpm"
+          cache: pnpm
 
       - name: 🚧 Install deps
         run: pnpm install

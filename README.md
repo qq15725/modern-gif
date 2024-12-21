@@ -46,7 +46,8 @@ import workerUrl from 'modern-gif/worker?url'
 const output = await encode({
   // workerUrl is optional
   workerUrl,
-  width: 200, height: 200,
+  width: 200,
+  height: 200,
   frames: [
     // CanvasImageSource | BufferSource | string
     { data: '/example1.png', delay: 100 },
@@ -74,13 +75,14 @@ console.log(gif)
 
 // Image data for all frames (workerUrl is optional)
 const frames = await decodeFrames(buffer, { workerUrl })
-frames.forEach(frame => {
+frames.forEach((frame) => {
   const canvas = document.createElement('canvas')
   canvas.width = frame.width
   canvas.height = frame.height
   canvas.getContext('2d').putImageData(
     new ImageData(frame.data, frame.width, frame.height),
-    0, 0,
+    0,
+    0,
   )
   document.body.append(canvas)
 })
@@ -107,7 +109,8 @@ const frames = await decodeFrames(buffer, { workerUrl })
 const output = await encode({
   // workerUrl is optional
   workerUrl,
-  width: gif.width, height: gif.height,
+  width: gif.width,
+  height: gif.height,
   frames,
   // lossy compression 2 - 255
   maxColors: 255,

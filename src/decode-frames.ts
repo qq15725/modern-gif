@@ -1,9 +1,9 @@
-import { decode } from './decode'
-import { mergeBuffers, resovleSource } from './utils'
-import { lzwDecode } from './lzw-decode'
-import { deinterlace } from './deinterlace'
-import { createWorker } from './create-worker'
 import type { Frame, Gif } from './types'
+import { createWorker } from './create-worker'
+import { decode } from './decode'
+import { deinterlace } from './deinterlace'
+import { lzwDecode } from './lzw-decode'
+import { mergeBuffers, resovleSource } from './utils'
 
 export interface DecodedFrame {
   width: number
@@ -28,7 +28,8 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
 
   if ((options as any)?.workerUrl) {
     return createWorker({ workerUrl: (options as any).workerUrl }).call(
-      'frames:decode', array,
+      'frames:decode',
+      array,
       [array.buffer],
     )
   }
@@ -55,7 +56,7 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
   let previousFrame: Frame | undefined
   let previousPixels = pixels.slice()
 
-  return frames.map(frame => {
+  return frames.map((frame) => {
     const {
       left,
       top,
@@ -96,7 +97,8 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
 
     if (previousDisposal === 3) {
       pixels = previousPixels.slice()
-    } else if (previousDisposal === 2) {
+    }
+    else if (previousDisposal === 2) {
       const { left, top, width, height } = previousFrame!
       const bottom = top + height
       for (let y = top; y < bottom; y++) {
@@ -120,7 +122,8 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
           pixels[index + 1] = g
           pixels[index + 2] = b
           pixels[index + 3] = 255
-        } else if (previousDisposal === 2) {
+        }
+        else if (previousDisposal === 2) {
           pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
         }
       }

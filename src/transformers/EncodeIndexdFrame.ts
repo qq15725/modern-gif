@@ -1,8 +1,8 @@
-import { Writer } from '../Writer'
-import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from '../utils'
-import { lzwEncode } from '../lzw-encode'
 import type { EncoderConfig } from '../Encoder'
 import type { EncodingFrame } from '../types'
+import { lzwEncode } from '../lzw-encode'
+import { EXTENSION, EXTENSION_GRAPHIC_CONTROL, EXTENSION_GRAPHIC_CONTROL_BLOCK_SIZE, IMAGE_DESCRIPTOR } from '../utils'
+import { Writer } from '../Writer'
 
 export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, EncodingFrame> {
   protected _rsControler!: ReadableStreamDefaultController<Uint8Array>
@@ -12,7 +12,7 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Encod
   })
 
   writable = new WritableStream<EncodingFrame>({
-    write: frame => {
+    write: (frame) => {
       const writer = new Writer()
 
       const {
@@ -31,10 +31,14 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Encod
       const transparent = frame.graphicControl?.transparent
       let transparentIndex = frame.graphicControl?.transparentIndex ?? 255
 
-      if (left < 0 || left > 65535) throw new Error('Left invalid.')
-      if (top < 0 || top > 65535) throw new Error('Top invalid.')
-      if (width <= 0 || width > 65535) throw new Error('Width invalid.')
-      if (height <= 0 || height > 65535) throw new Error('Height invalid.')
+      if (left < 0 || left > 65535)
+        throw new Error('Left invalid.')
+      if (top < 0 || top > 65535)
+        throw new Error('Top invalid.')
+      if (width <= 0 || width > 65535)
+        throw new Error('Width invalid.')
+      if (height <= 0 || height > 65535)
+        throw new Error('Height invalid.')
 
       // color table
       let minCodeSize = 8
@@ -56,7 +60,8 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Encod
         if (!disposal) {
           disposal = 2 // force clear if using transparent color
         }
-      } else {
+      }
+      else {
         transparentIndex = 0
       }
       // <Packed Fields>
@@ -64,7 +69,7 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Encod
       // 4-6 : disposal
       // 7   : user input flag = 0
       // 8   : transparency flag
-      writer.writeByte(parseInt(`000${ Number(disposal & 7).toString(2).padStart(3, '0') }0${ transparent ? 1 : 0 }`, 2))
+      writer.writeByte(Number.parseInt(`000${Number(disposal & 7).toString(2).padStart(3, '0')}0${transparent ? 1 : 0}`, 2))
       writer.writeUnsigned(delay / 10) // delay x 1/100 sec
       writer.writeByte(transparentIndex) // transparent color index
       writer.writeByte(0) // block terminator
@@ -82,11 +87,12 @@ export class EncodeIndexdFrame implements ReadableWritablePair<Uint8Array, Encod
         // 3   : sorted = 0
         // 4-5 : reserved = 0
         // 6-8 : local color table size
-        writer.writeByte(parseInt(`10000${ (minCodeSize - 1).toString(2).padStart(3, '0') }`, 2))
+        writer.writeByte(Number.parseInt(`10000${(minCodeSize - 1).toString(2).padStart(3, '0')}`, 2))
 
         // Local Color Table
         writer.writeBytes(colorTable.flat())
-      } else {
+      }
+      else {
         writer.writeByte(0)
       }
 

@@ -1,10 +1,10 @@
+import type { EncoderOptions } from './options'
+import type { EncodingFrame, UnencodedFrame } from './types'
 import { Palette } from 'modern-palette'
+import { createWorker } from './create-worker'
 import { Logger } from './Logger'
 import { CropIndexedFrame, EncodeGif, EncodeIndexdFrame, FrameToIndexedFrame } from './transformers'
 import { loadImage, resovleSource } from './utils'
-import { createWorker } from './create-worker'
-import type { EncoderOptions } from './options'
-import type { EncodingFrame, UnencodedFrame } from './types'
 
 export interface EncoderConfig extends EncoderOptions {
   maxColors: number
@@ -33,18 +33,19 @@ export class Encoder {
     if (this._config.workerUrl) {
       this._worker = createWorker({ workerUrl: this._config.workerUrl })
       this._worker.call('encoder:init', options)
-    } else {
+    }
+    else {
       this._config.frames?.forEach(frame => this.encode(frame))
     }
   }
 
   protected _resolveOptions(options: EncoderOptions): EncoderConfig {
-    (['width', 'height'] as const).forEach(key => {
+    (['width', 'height'] as const).forEach((key) => {
       if (
         typeof options[key] !== 'undefined'
         && Math.floor(options[key]!) !== options[key]
       ) {
-        console.warn(`${ key } cannot be a floating point number`)
+        console.warn(`${key} cannot be a floating point number`)
         options[key] = Math.floor(options[key]!)
       }
     })
@@ -72,7 +73,8 @@ export class Encoder {
       let transfer: any | undefined
       if (ArrayBuffer.isView(frame.data)) {
         transfer = [frame.data.buffer]
-      } else if (frame.data instanceof ArrayBuffer) {
+      }
+      else if (frame.data instanceof ArrayBuffer) {
         transfer = [frame.data]
       }
       return this._worker.call('encoder:encode', frame, transfer)
@@ -89,7 +91,7 @@ export class Encoder {
     let { data } = frame
 
     try {
-      this._logger.time(`palette:sample-${ id }`)
+      this._logger.time(`palette:sample-${id}`)
       data = typeof data === 'string'
         ? await loadImage(data)
         : data
@@ -107,8 +109,9 @@ export class Encoder {
       })
 
       this._palette.addSample(data)
-    } finally {
-      this._logger.timeEnd(`palette:sample-${ id }`)
+    }
+    finally {
+      this._logger.timeEnd(`palette:sample-${id}`)
     }
   }
 
@@ -132,14 +135,14 @@ export class Encoder {
     // eslint-disable-next-line no-console
     this._logger.isDebug && console.debug(
       colors.map(() => '%c ').join(''),
-      ...colors.map(color => `margin: 1px; background: ${ color.hex }`),
+      ...colors.map(color => `margin: 1px; background: ${color.hex}`),
     )
 
     this._logger.time('encode')
-    const output = await new Promise<Uint8Array>(resolve => {
+    const output = await new Promise<Uint8Array>((resolve) => {
       new ReadableStream({
-        start: controller => {
-          this._encodingFrames.forEach(frame => {
+        start: (controller) => {
+          this._encodingFrames.forEach((frame) => {
             controller.enqueue(frame)
           })
           controller.close()
@@ -159,7 +162,7 @@ export class Encoder {
 
     switch (format) {
       case 'blob':
-        return new Blob([output.buffer], { type: 'image/gif' })
+        return new Blob([output.buffer as ArrayBuffer], { type: 'image/gif' })
       case 'arrayBuffer':
       default:
         return output.buffer
