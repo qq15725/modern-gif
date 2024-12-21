@@ -60,8 +60,7 @@
     "build": "pnpm build:lib && pnpm build:worker",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag",
-    "typecheck": "tsc --noEmit",
-    "prepare": "simple-git-hooks"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "modern-palette": "^2.0.0"
