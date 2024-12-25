@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Playground</title>
+    <style>
+      canvas {
+        margin: 8px;
+        width: 200px;
+      }
+
+      img {
+        display: block;
+        margin: 8px;
+        width: 200px;
+      }
+    </style>
+  </head>
+
+  <button>ReEncode</button>
+
+  <img src="/test/assets/test10.gif" />
+
+  <body>
+  <script type="module" async>
+    import { Encoder, decode, decodeFrames } from './src'
+    /* eslint-disable no-console */
+    const el = document.querySelector('img')
+    const url = el.src
+
+    let width = 0
+    let height = 0
+    let frames = []
+    if (url.startsWith('data:image/svg+xml;')) {
+      width = el.naturalWidth
+      height = el.naturalHeight
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(el, 0, 0)
+      const frame = ctx.getImageData(0, 0, width, height)
+      frames.push(frame)
+    } else {
+      const data = await fetch(url).then((res) => res.arrayBuffer())
+
+      console.log('raw size', data.byteLength / 1024)
+
+      console.time('decode')
+      const gif = decode(data)
+      console.timeEnd('decode')
+
+      console.log(gif)
+      console.time('decode frames')
+      frames = await decodeFrames(data, {
+        // workerUrl,
+      })
+      console.timeEnd('decode frames')
+      width = gif.width
+      height = gif.height
+    }
+
+    const encoder = new Encoder({
+      debug: true,
+      width,
+      height,
+      maxColors: 255,
+      // workerUrl,
+    })
+
+    for (let len = frames.length, i = 0; i < len; i++) {
+      const frame = frames[i]
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.style.width = '60px'
+      canvas.style.border = '1px solid grey'
+      canvas.getContext('2d').putImageData(
+        new ImageData(frame.data, frame.width, frame.height),
+        0, 0,
+      )
+      document.body.append(canvas)
+    }
+
+    document.querySelector('button').onclick = async () => {
+      console.time('encode')
+      for (let len = frames.length, i = 0; i < len; i++) {
+        const frame = frames[i]
+        await encoder.encode({
+          delay: frame.delay,
+          data: frame.data,
+        })
+      }
+      console.timeEnd('encode')
+
+      console.time('flush')
+      const blob = await encoder.flush('blob')
+      console.timeEnd('flush')
+
+      console.log('encode size', blob.size / 1024)
+
+      const img = new Image()
+      img.src = URL.createObjectURL(blob)
+      document.body.append(img)
+
+      blob.arrayBuffer().then(async buffer => {
+        console.log(decode(buffer))
+        await decodeFrames(buffer)
+      })
+
+      console.log(encoder)
+    }
+  </script>
+  </body>
+</html>

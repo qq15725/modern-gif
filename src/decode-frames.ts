@@ -123,9 +123,6 @@ export function decodeFrames(source: BufferSource, options?: DecodeFramesOptions
           pixels[index + 2] = b
           pixels[index + 3] = 255
         }
-        else if (previousDisposal === 2) {
-          pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0
-        }
       }
     }
 
