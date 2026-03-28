@@ -1,4 +1,4 @@
-import type { Gif, UnencodedFrame } from './types'
+import type { DitherMethod, Gif, UnencodedFrame } from './types'
 
 export interface EncoderOptions extends Partial<Omit<Gif, 'width' | 'height' | 'frames'>> {
   /** GIF width */
@@ -17,4 +17,8 @@ export interface EncoderOptions extends Partial<Omit<Gif, 'width' | 'height' | '
   premultipliedAlpha?: boolean
   /** Palette tint */
   tint?: Array<number>
+  /** Specifies the dithering method to be used for colors */
+  dither?: DitherMethod
+  /** Specifies the dithering method to be used for partially transparent pixels */
+  ditherTransparency?: DitherMethod
 }
