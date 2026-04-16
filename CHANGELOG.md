@@ -1,3 +1,12 @@
+# [2.1.0](https://github.com/qq15725/modern-gif/compare/v2.0.4...v2.1.0) (2026-04-16)
+
+
+### Features
+
+* dithering ([26acaf1](https://github.com/qq15725/modern-gif/commit/26acaf1976028b19fb7a01e0515268549352fb76))
+
+
+
 ## [2.0.4](https://github.com/qq15725/modern-gif/compare/v2.0.3...v2.0.4) (2024-12-25)
 
 
