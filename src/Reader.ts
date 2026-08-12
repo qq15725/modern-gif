@@ -37,10 +37,12 @@ export class Reader {
   readSubBlock(): number[] {
     const block: number[] = []
     while (true) {
-      const val = this.readByte()
-      if (val === 0 && this._view.getUint8(this.offset) !== 0)
+      const length = this.readByte()
+      if (length === 0)
         break
-      block.push(val)
+      for (let i = 0; i < length; i++) {
+        block.push(this.readByte())
+      }
     }
     return block
   }
